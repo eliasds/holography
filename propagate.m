@@ -33,17 +33,17 @@ elseif nargin==3
 elseif nargin==2
     M=m;N=n;
     ps=6.5e-6;
-    lambda=632.8e-9;
+    Z=0;
 elseif nargin==1
     M=m;N=n;
     ps=6.5e-6;
-    lambda=632.8e-9;
     Z=0;
+    lambda=632.8e-9;
 else
     M=m;N=n;
     ps=6.5e-6;
-    lambda=632.8e-9;
     Z=0;
+    lambda=632.8e-9;
     Ein=phantom;
 end
 
