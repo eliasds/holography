@@ -67,7 +67,7 @@ else
         Hout = gpuArray.zeros(M,N,length(Z));
     end
 end
-k=(2*pi/lambda);  %wavenumber
+%k=(2*pi/lambda);  %wavenumber
 
 
 % Spatial Sampling

@@ -66,7 +66,7 @@ else
     Eout = gpuArray.zeros(m,n,length(Z));
     aveborder=gpuArray(mean(cat(2,Ein(1,:),Ein(m,:),Ein(:,1)',Ein(:,n)')));
 end
-k=(2*pi/lambda);  %wavenumber
+%k=(2*pi/lambda);  %wavenumber
 
 
 % Spatial Sampling
