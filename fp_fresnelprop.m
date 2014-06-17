@@ -60,7 +60,7 @@ else
     Z = gpuArray(Z);
     ps = gpuArray(ps);
     Eout = gpuArray.zeros(m,n,length(Z));
-    aveborder=gpuArray(mean(cat(2,E0(1,:),E0(m,:),E0(:,1)',E0(:,n)')));
+    aveborder=gpuArray(mean(cat(2,Ein(1,:),Ein(m,:),Ein(:,1)',Ein(:,n)')));
     if nargout>1
         Hout = gpuArray.zeros(M,N,length(Z));
     end
