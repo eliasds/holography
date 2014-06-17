@@ -54,7 +54,7 @@ gpu_num = gpuDeviceCount; %Determines if there is a CUDA enabled GPU
 if gpu_num == 0;
     Imin = inf(m,n); 
     zmap = zeros(m,n);
-    Eout = zeros(m,n,length(Z));
+    Eout = zeros(m,n);
     aveborder=mean(cat(2,Ein(1,:),Ein(m,:),Ein(:,1)',Ein(:,n)'));
 else
     % reset(gpuDevice(1));
@@ -63,7 +63,7 @@ else
     ps = gpuArray(ps);
     Imin = gpuArray.inf(m,n);
     zmap = gpuArray.zeros(m,n);
-    Eout = gpuArray.zeros(m,n,length(Z));
+    Eout = gpuArray.zeros(m,n);
     aveborder=gpuArray(mean(cat(2,Ein(1,:),Ein(m,:),Ein(:,1)',Ein(:,n)')));
 end
 %k=(2*pi/lambda);  %wavenumber
