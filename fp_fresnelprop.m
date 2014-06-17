@@ -51,6 +51,7 @@ end
 % Initialize variables into CPU or GPU
 if gpu_num == 0;
     Eout = zeros(m,n,length(Z));
+    aveborder=mean(cat(2,Ein(1,:),Ein(m,:),Ein(:,1)',Ein(:,n)'));
     if nargout>1
         Hout = zeros(M,N,length(Z));
     end
@@ -59,6 +60,7 @@ else
     Z = gpuArray(Z);
     ps = gpuArray(ps);
     Eout = gpuArray.zeros(m,n,length(Z));
+    aveborder=gpuArray(mean(cat(2,E0(1,:),E0(m,:),E0(:,1)',E0(:,n)')));
     if nargout>1
         Hout = gpuArray.zeros(M,N,length(Z));
     end
@@ -74,7 +76,6 @@ fx2fy2 = fx.^2 + fy.^2;
 
 
 % Padding value 
-aveborder=mean(cat(2,Ein(1,:),Ein(m,:),Ein(:,1)',Ein(:,n)'));
 E0_pad=ones(M,N)*aveborder; %pad by average border value to avoid sharp jumps
 E0_pad(1+(M-m)/2:(M+m)/2,1+(N-n)/2:(N+n)/2)=Ein;
 
