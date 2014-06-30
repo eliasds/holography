@@ -6,50 +6,65 @@
 % (ref pg 67,J Goodman, Introduction to Fourier Optics)
 % Version 5 works on CUDA enabled GPU if available.
 % function [Eout,Hout] = propagate(Ein,lambda,Z,ps,zpad)
-% inputs: Ein - complex field at input plane
+% inputs:
+%         Ein - complex field at input plane
 %         lambda - wavelength of light [m]
 %         Z - vector of propagation distances [m], (can be negative)
 %               i.e. "linspace(0,10E-3,500)" or "0.01"
 %         ps - pixel size [m]
-%         zpad - size of propagation kernel desired
-% outputs:Eout - propagated complex field
+% optional inputs:
+%         'zpad' - size of propagation kernel desired in pixels
+%               i.e.  'zpad',1024  or 'zpad',2048
+%         'cpu' - forces use of CPU, even if a CUDA GPU is available
+% outputs:
+%         Eout - propagated complex field
 %         Hout - propagation kernel to check for aliasing
 %
 % Daniel Shuldman, UC Berkeley, eliasds@gmail.com
 
 
-function [Eout,Hout] = propagate(Ein,lambda,Z,ps,zpad)
+function [Eout,Hout] = propagate(Ein,lambda,Z,ps,varargin)
 
-% Set Defaults and detect initial image size
-[m,n]=size(Ein);
-if nargin==5
-    M=zpad;
-    N=zpad;
-elseif nargin==4
-    M=m;N=n;
-elseif nargin==3
-    M=m;N=n;
+% Set Defaults and detect GPU and initial image size
+[m,n]=size(Ein);  M=m;  N=n;
+gpu_num = gpuDeviceCount; %Determines if there is a CUDA enabled GPU
+
+if nargin==3
     ps=6.5e-6;
 elseif nargin==2
-    M=m;N=n;
     ps=6.5e-6;
     Z=0;
 elseif nargin==1
-    M=m;N=n;
     ps=6.5e-6;
     Z=0;
     lambda=632.8e-9;
-else
-    M=m;N=n;
+elseif nargin<1
     ps=6.5e-6;
     Z=0;
     lambda=632.8e-9;
     Ein=phantom;
 end
 
+while ~isempty(varargin)
+    switch upper(varargin{1})
+         
+        case 'ZPAD'
+            zpad = varargin{2};
+            varargin(1:2) = [];
+            M=zpad;
+            N=zpad;
+             
+        case 'CPU'
+            varargin(1) = [];
+            gpu_num = 0;
+             
+        otherwise
+            error(['Unexpected option: ' varargin{1}])
+    end
+end
+
 
 % Initialize variables into CPU or GPU
-gpu_num = gpuDeviceCount; %Determines if there is a CUDA enabled GPU
 if gpu_num == 0;
     Eout = zeros(m,n,length(Z));
     aveborder=mean(cat(2,Ein(1,:),Ein(m,:),Ein(:,1)',Ein(:,n)'));
