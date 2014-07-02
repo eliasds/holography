@@ -45,6 +45,13 @@ elseif nargin<1
     Ein=phantom;
 end
 
+if max(size(varargin))==1&&isnumeric(varargin{1})&&isscalar(varargin{1})
+        zpad=varargin{1};
+        varargin(1) = [];
+        M=zpad;
+        N=zpad;
+end
+        
 while ~isempty(varargin)
     switch upper(varargin{1})
          
