@@ -54,5 +54,5 @@ close(wb);
 background=background/numfiles;
 
 
-imwrite(background, outputFileName, tif);
-save(outputFileName,background);
+%imwrite(background, 'background.tif', tif);
+%save('background.mat',background);
