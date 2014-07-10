@@ -2,7 +2,7 @@
 % 
 % Version 2.0
 
-function [background] = avgbg(varargin)
+function background = avgbg(varargin)
 
 gpu_num = gpuDeviceCount; %Determines if there is a CUDA enabled GPU
 background=0;
@@ -54,5 +54,5 @@ close(wb);
 background=background/numfiles;
 
 
-imwrite(background, outputFileName, ext);
-save(outputFileName,Imin,zmap);
+imwrite(background, outputFileName, tif);
+save(outputFileName,background);
