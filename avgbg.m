@@ -7,7 +7,7 @@ function background = avgbg(varargin)
 gpu_num = gpuDeviceCount; %Determines if there is a CUDA enabled GPU
 background=0;
 
-filename = 'DH-';
+filename = 'DH_';
 ext = 'tif';
 outputFileName = 'background';
 
@@ -53,6 +53,9 @@ end
 close(wb);
 background=background/numfiles;
 
+if gpu_num > 0;
+    background=gather(background); 
+end
 
-%imwrite(background, 'background.tif', tif);
-%save('background.mat',background);
+imwrite(background, 'background.tif', 'tif');
+save('background.mat','background');
