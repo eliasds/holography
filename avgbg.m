@@ -18,6 +18,7 @@ while ~isempty(varargin)
         case 'FILENAME'
             filename = varargin{2};
             [pathstr, filename, ext] = fileparts(filename);
+            strrep(filename, '*', '');
             varargin(1:2) = [];
             
         case 'CPU'
@@ -26,9 +27,9 @@ while ~isempty(varargin)
             
         case 'EXT'
             ext = varargin{2};
-            varargin(1:2) = [];
             ext = ['.', ext];
             strrep(ext, '..', '.');
+            varargin(1:2) = [];
             
         case 'OUTPUT'
             outputFileName = varargin{2};
@@ -47,11 +48,11 @@ filesort = dir([filename,'*',ext]);
 numfiles = numel(filesort);
 
 if gpu_num > 0;
-    background=gpuArray(background); 
+    background=gpuArray(background);
 end
 
 wb = waitbar(1/numfiles,['importing files']);
-for L=1:numfiles 
+for L=1:numfiles
     background=background+double(imread(filesort(L).name));
     waitbar(L/numfiles,wb);
 end
@@ -59,7 +60,7 @@ close(wb);
 background=background/numfiles;
 
 if gpu_num > 0;
-    background=gather(background); 
+    background=gather(background);
 end
 
 if saveon == 1;
