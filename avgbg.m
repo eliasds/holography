@@ -9,14 +9,8 @@ background = 0;
 saveon = 0;
 
 filename = 'DH_';
-ext = 'tif';
+ext = '.tif';
 outputFileName = 'background';
-
-% if max(size(varargin))==1
-%         filename=varargin{1};
-%         [pathstr, name, ext] = fileparts(filename);
-%         varargin(1) = [];
-% end
 
 while ~isempty(varargin)
     switch upper(varargin{1})
@@ -33,6 +27,8 @@ while ~isempty(varargin)
         case 'EXT'
             ext = varargin{2};
             varargin(1:2) = [];
+            ext = ['.', ext];
+            strrep(ext, '..', '.');
             
         case 'OUTPUT'
             outputFileName = varargin{2};
@@ -47,7 +43,7 @@ while ~isempty(varargin)
     end
 end
 
-filesort = dir([filename,'*.',ext]);
+filesort = dir([filename,'*',ext]);
 numfiles = numel(filesort);
 
 if gpu_num > 0;
@@ -67,6 +63,6 @@ if gpu_num > 0;
 end
 
 if saveon == 1;
-    save(strcat(outputFileName, '.mat'),'background');
-    imwrite(uint8(background), strcat(outputFileName, '.tif'), 'tif');
+    save([outputFileName, '.mat'],'background');
+    imwrite(uint8(background), [outputFileName, '.tif'], 'tif');
 end
