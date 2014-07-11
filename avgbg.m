@@ -5,7 +5,8 @@
 function background = avgbg(varargin)
 
 gpu_num = gpuDeviceCount; %Determines if there is a CUDA enabled GPU
-background=0;
+background = 0;
+saveon = 0;
 
 filename = 'DH_';
 ext = 'tif';
@@ -33,6 +34,14 @@ while ~isempty(varargin)
             ext = varargin{2};
             varargin(1:2) = [];
             
+        case 'OUTPUT'
+            outputFileName = varargin{2};
+            varargin(1:2) = [];
+            
+        case 'SAVE'
+            saveon = 1;
+            varargin(1) = [];
+            
         otherwise
             error(['Unexpected option: ' varargin{1}])
     end
@@ -57,5 +66,7 @@ if gpu_num > 0;
     background=gather(background); 
 end
 
-imwrite(background, 'background.tif', 'tif');
-save('background.mat','background');
+if saveon == 1;
+    save(strcat(outputFileName, '.mat'),'background');
+    imwrite(uint8(background), strcat(outputFileName, '.tif'), 'tif');
+end
