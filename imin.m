@@ -19,7 +19,7 @@
 % Daniel Shuldman, UC Berkeley, eliasds@gmail.com
 
 
-function [Imin, zmap] = fp_imin(Ein,lambda,Z,ps,zpad)
+function [Imin, zmap] = imin(Ein,lambda,Z,ps,zpad)
 
 % Set Defaults and detect initial image size
 [m,n]=size(Ein);
