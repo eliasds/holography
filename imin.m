@@ -29,8 +29,12 @@ function [Imin, zmap] = imin(Ein,lambda,Z,ps,varargin)
 
 % Set Defaults and detect GPU and initial image size
 [m,n]=size(Ein);  M=m;  N=n;
-gpu_num = gpuDeviceCount; %Determines if there is a CUDA enabled GPU
 mask=1; %Default Aperture Mask function
+try
+    gpu_num = gpuDeviceCount; %Determines if there is a CUDA enabled GPU
+catch err
+    gpu_num = 0;
+end
 
 if nargin==3
     ps=6.5e-6;
