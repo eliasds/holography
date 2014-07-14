@@ -122,9 +122,10 @@ for z = 1:length(Z)
     zmap(Imin==Eout) = Z(z);
 end
 
+Imin = Imin.^2;
 
 % Gather variables from GPU if necessary
 if gpu_num > 0;
-    Imin = gather(Imin).^2;
+    Imin = gather(Imin);
     zmap = gather(zmap);
 end
