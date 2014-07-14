@@ -7,50 +7,78 @@
 % (ref pg 67,J Goodman, Introduction to Fourier Optics)
 % Version 5 works on CUDA enabled GPU if available.
 % function [Imin, zmap] = fp_imin(Ein,lambda,Z,ps,zpad)
-% inputs: Ein - complex field at input plane
+% inputs:
+%         Ein    - complex field at input plane
 %         lambda - wavelength of light [m]
-%         Z - vector of propagation distances [m], (can be negative)
-%               i.e. "linspace(0,10E-3,500)" or "0.01"
-%         ps - pixel size [m]
-%         zpad - size of propagation kernel desired
+%         Z      - vector of propagation distances [m], (can be negative)
+%                  i.e. "linspace(0,10E-3,500)" or "0.01"
+%         ps     - pixel size [m]
+% optional inputs:
+%         'zpad' - size of propagation kernel desired in pixels
+%                  i.e.  'zpad',1024  or 'zpad',2048
+%         'cpu'  - forces use of CPU, even if a CUDA GPU is available
+%         'mask' - Allows for using a coded aperture mask. Mask image must
+%                  be same size as padded image, i.e. 'mask',mask
 % outputs:Imin - find minimum intensity of each pixel through focus
 %         zmap - map z-coordinate to each minimum intesity pixel
 %
 % Daniel Shuldman, UC Berkeley, eliasds@gmail.com
 
 
-function [Imin, zmap] = imin(Ein,lambda,Z,ps,zpad)
+function [Imin, zmap] = imin(Ein,lambda,Z,ps,varargin)
 
-% Set Defaults and detect initial image size
-[m,n]=size(Ein);
-if nargin==5
-    M=zpad;
-    N=zpad;
-elseif nargin==4
-    M=m;N=n;
-elseif nargin==3
-    M=m;N=n;
+% Set Defaults and detect GPU and initial image size
+[m,n]=size(Ein);  M=m;  N=n;
+gpu_num = gpuDeviceCount; %Determines if there is a CUDA enabled GPU
+mask=1; %Default Aperture Mask function
+
+if nargin==3
     ps=6.5e-6;
 elseif nargin==2
-    M=m;N=n;
     ps=6.5e-6;
     Z=0;
 elseif nargin==1
-    M=m;N=n;
     ps=6.5e-6;
     Z=0;
     lambda=632.8e-9;
-else
-    M=m;N=n;
+elseif nargin<1
     ps=6.5e-6;
     Z=0;
     lambda=632.8e-9;
     Ein=phantom;
 end
 
+if max(size(varargin))==1&&isnumeric(varargin{1})&&isscalar(varargin{1})
+        zpad=varargin{1};
+        varargin(1) = [];
+        M=zpad;
+        N=zpad;
+end
+
+while ~isempty(varargin)
+    switch upper(varargin{1})
+        
+        case 'ZPAD'
+            zpad = varargin{2};
+            varargin(1:2) = [];
+            M=zpad;
+            N=zpad;
+            
+        case 'CPU'
+            varargin(1) = [];
+            gpu_num = 0;
+            
+        case 'MASK'
+            mask = varargin{2};
+            varargin(1:2) = [];
+            
+        otherwise
+            error(['Unexpected option: ' varargin{1}])
+    end
+end
+
 
 % Initialize variables into CPU or GPU
-gpu_num = gpuDeviceCount; %Determines if there is a CUDA enabled GPU
 if gpu_num == 0;
     Imin = inf(m,n); 
     zmap = zeros(m,n);
@@ -87,9 +115,9 @@ for z = 1:length(Z)
     %h(:,:,z) = exp(1i*k*z)*exp(1i*k*(x.^2+y.^2)/(2*z))/(1i*lambda*z); %Fresnel kernel
     %H  = exp(1i*k*Z(z))*exp(-1i*pi*lambda*Z(z)*fx2fy2); %Correct Transfer Function
     H  = exp(-1i*pi*lambda*Z(z)*fx2fy2); %Fast Transfer Function
-    Eout_pad=ifft2(ifftshift(E0fft.*H)); %real, magnitude of the field
+    Eout_pad=ifft2(ifftshift(E0fft.*H.*mask));
 
-    Eout=abs(Eout_pad(1+(M-m)/2:(M+m)/2,1+(N-n)/2:(N+n)/2)); %real, unpadded reconstruction intensity
+    Eout=abs(Eout_pad(1+(M-m)/2:(M+m)/2,1+(N-n)/2:(N+n)/2)); %real, unpadded reconstructed field
     Imin = min(Imin, Eout);
     zmap(Imin==Eout) = Z(z);
 end
