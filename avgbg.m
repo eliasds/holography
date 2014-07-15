@@ -4,9 +4,13 @@
 
 function background = avgbg(varargin)
 
-gpu_num = gpuDeviceCount; %Determines if there is a CUDA enabled GPU
 background = 0;
 saveon = 0;
+try
+    gpu_num = gpuDeviceCount; %Determines if there is a CUDA enabled GPU
+catch err
+    gpu_num = 0;
+end
 
 filename = 'DH_';
 ext = '.tif';
