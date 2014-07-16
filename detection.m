@@ -2,7 +2,7 @@
 %
 function [Xauto,Yauto,Zauto_centroid,Zauto_mean,Zauto_min] = detection(Imin, zmap, thlevel, dilaterode);
 th = Imin<thlevel;
-disk1 = strel('disk', dilatenum, 0);
+disk1 = strel('disk', dilaterode, 0);
 th = imdilate(th,strel('disk', dilaterode, 0));
 th = imerode(th,strel('disk', dilaterode, 0));
 th = imdilate(th,strel('disk', dilaterode, 0));

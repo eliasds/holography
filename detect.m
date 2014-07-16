@@ -164,7 +164,7 @@ wb = waitbar(1/numfiles,['Locating Particle Locations from Data']);
 for L=1:numfiles % FYI: for loops always reset 'i' values.
 
     % load data from mat files.
-    load([filesort(L).name]);
+    load([filesort(L).firstname,'.mat']);
     % 
     [Xauto,Yauto,Zauto_centroid,Zauto_mean,Zauto_min] = detection(Imin, zmap, thlevel, dilaterode);
     locationxyz(L).time=[Xauto;Yauto;Zauto_centroid;Zauto_mean;Zauto_min]';
