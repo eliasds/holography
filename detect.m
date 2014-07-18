@@ -34,34 +34,34 @@ tic
 dirname = '';
 filename    = 'DH_';
 backgroundfile = 'background.mat';
-M = 8.4; %Magnification
+mag = 8.4; %Magnification
 ps = 6.5E-6; % Pixel Size in meters
 refractindex = 1.33;
 lambda = 632.8E-9; % Laser wavelength in meters
-z1=0.44E-3;
-z2=10.42E-3;
+z1=0E-3;
+z2=7.9E-3;
 steps=501;
 vortloc=[1180, 2110, 2.7E-3]; %location of vorticella in "cuvette in focus"
-%vortloc=[1550,2160]; %location of vorticella in "vort in focus"
-thlevel = 0.02;
+vortloc=[1540, 2105, 0]; %location of vorticella in "vort in focus"
+thlevel = 0.0002;
 dilaterode=2;
 zpad=2048;
 radix2=1024;
 firstframe = 1;
 lastframe = 'numfiles';
-%lastframe = '3';
+%lastframe = '11';
 skipframes = 2; % skipframes = 1 is default
 outputpathstr = '1024';
 % maxint=2; %overide default max intensity: 2*mean(Imin(:))
 % test=1;
 
-load('constants.mat')
+%load('constants.mat')
 
 Zin=linspace(z1,z2,steps);
 Zout=Zin;
 %rect = [1550-512,2070-1024,1023,1023]; %for "vort in focus" data
 rect = [vortloc(1)-512,vortloc(2)-1024,1023,1023]; %for "cevette in focus" data
-ps = ps / M; % Effective Pixel Size in meters
+ps = ps / mag; % Effective Pixel Size in meters
 lambda = lambda / refractindex; % Effective laser wavelength in meters
 
 
@@ -69,11 +69,13 @@ lambda = lambda / refractindex; % Effective laser wavelength in meters
 filename = strcat(dirname,filename);
 filesort = dir([filename,'*.tif']);
 numfiles = numel(filesort);
+numframes = floor((eval(lastframe) - firstframe)/skipframes);
 for L = 1:numfiles
     [filesort(L).pathstr, filesort(L).firstname, filesort(L).ext] = ...
         fileparts([filesort(L).name]);
     %filesort(i).matname=strcat(filesort(i).matname,'.mat');
 end
+
 
 %
 varnam=who('-file',backgroundfile);
@@ -109,7 +111,6 @@ end
 
 Eout(numfiles).time=[];
 loop = 0;
-numframes = floor((eval(lastframe) - firstframe)/skipframes);
 wb = waitbar(0/numframes,'Analysing Data for Imin');
 for L=firstframe:skipframes:eval(lastframe)
     loop = loop + 1;
@@ -207,6 +208,7 @@ end
 close(wb);
 toc
 
-save(strcat(filename(1:end-1),'-',num2str(thlevel*100,2),'th_',num2str(dilaterode,2),'di','.mat'), 'locationxyz')
+save(strcat(filename(1:end-1),'-','th',num2str(thlevel*10000,2),'_dernum',num2str(dilaterode,2),'.mat'), 'locationxyz')
 
+cd('..')
 %
