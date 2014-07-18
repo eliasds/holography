@@ -40,26 +40,27 @@ refractindex = 1.33;
 lambda = 632.8E-9; % Laser wavelength in meters
 z1=0.44E-3;
 z2=10.42E-3;
-steps=101;
+steps=501;
 vortloc=[1180, 2110, 2.7E-3]; %location of vorticella in "cuvette in focus"
 %vortloc=[1550,2160]; %location of vorticella in "vort in focus"
 thlevel = 0.02;
 dilaterode=2;
-zpad=4096;
-%maxint=2.5; %overide default max intensity: 2*mean(Imin(:))
-%test=1;
+zpad=2048;
 radix2=1024;
-firstframe = 4;
+firstframe = 1;
 lastframe = 'numfiles';
-lastframe = '4';
-skipframes = 1; % skipframes = 1 is default
+%lastframe = '3';
+skipframes = 2; % skipframes = 1 is default
+outputpathstr = '1024';
+% maxint=2; %overide default max intensity: 2*mean(Imin(:))
+% test=1;
 
 load('constants.mat')
 
 Zin=linspace(z1,z2,steps);
 Zout=Zin;
-rect = [1550-512,2070-1024,1023,1023]; %for "vort in focus" data
-%rect = [vortloc(1)-512,vortloc(2)-1024,1023,1023]; %for "cevette in focus" data
+%rect = [1550-512,2070-1024,1023,1023]; %for "vort in focus" data
+rect = [vortloc(1)-512,vortloc(2)-1024,1023,1023]; %for "cevette in focus" data
 ps = ps / M; % Effective Pixel Size in meters
 lambda = lambda / refractindex; % Effective laser wavelength in meters
 
@@ -79,6 +80,9 @@ varnam=who('-file',backgroundfile);
 background=load(backgroundfile,varnam{1});
 background=gpuArray(background.(varnam{1}));
 
+if ~exist(outputpathstr, 'dir')
+  mkdir(outputpathstr);
+end
 % for L=1:1:numfiles
 % %     Holo = imread([filesort(L).name]);
 %     Holo = double(gpuArray(imread([filesort(L).name])))./background;
@@ -92,8 +96,8 @@ background=gpuArray(background.(varnam{1}));
 
 %
 
-% Ein = gather((double(imread([filesort(1).name]))./background));
-Ein = gather((double(imread([filesort(1).name]))));
+Ein = gather((double(imread([filesort(1).name]))./background));
+% Ein = gather((double(imread([filesort(1).name]))));
 % Ein = gather(double(background));
 if ~exist('maxint')
     maxint=2*mean(Ein(:));
@@ -112,16 +116,23 @@ for L=firstframe:skipframes:eval(lastframe)
     % import data from tif files.
     % Ein = (double(imread([filesort(L).name])));
     Holo = (double(imread([filesort(L).name]))./background);
-    Ein = Holo;
-%     Ein = imcrop(Holo,rect);
+%     Ein = Holo;
+    Ein = imcrop(Holo,rect);
     % Ein=Ein(vortloc(2)-radix2+1:vortloc(2),vortloc(1)-radix2/2:vortloc(1)-1+radix2/2);
     %Ein=Ein(1882-768:1882+255,1353-511:1353+512);
     %Ein = (double(background));
     %Ein(isnan(Ein)) = mean(background(:));
     Ein(Ein>maxint)=maxint;
+
     
     [Imin, zmap] = imin(Ein,lambda,Zout,ps,zpad);
-    save([filesort(L).firstname,'.mat'],'Imin','zmap','-v7.3');
+    save([outputpathstr,'\',filesort(L).firstname,'.mat'],'Imin','zmap','-v7.3');
+    
+    
+    % The following 3 lines saves cropped and scaled region of Ein
+    Ein = Ein./maxint;
+    Ein = gather(Ein);
+    imwrite(Ein,[outputpathstr,'\',filesort(L).name]);
     
     waitbar(loop/numframes,wb);
 end
@@ -173,24 +184,29 @@ toc
 
 
 %% Detect Particle Centroids and Save
-%{
-locationxyz(numfiles).time=[];
-wb = waitbar(1/numfiles,['Locating Particle Locations from Data']);
-for L=1:numfiles % FYI: for loops always reset 'i' values.
+%
+cd(outputpathstr)
+loop = 0;
+locationxyz(numframes).time=[];
+wb = waitbar(0/numframes,'Locating Particle Locations from Data');
+%for L=1:numframes
+for L=firstframe:skipframes:eval(lastframe)
+    loop = loop + 1;
+
 
     % load data from mat files.
     load([filesort(L).firstname,'.mat']);
     % 
     [Xauto,Yauto,Zauto_centroid,Zauto_mean,Zauto_min] = detection(Imin, zmap, thlevel, dilaterode);
-    locationxyz(L).time=[Xauto;Yauto;Zauto_centroid;Zauto_mean;Zauto_min]';
+    locationxyz(loop).time=[Xauto;Yauto;Zauto_centroid;Zauto_mean;Zauto_min]';
     %
     %
-    waitbar(L/numfiles,wb);
+    waitbar(loop/numframes,wb);
 end
 
 close(wb);
 toc
 
-save(strcat(filename(1:end-1),'-',num2str(thlevel*10000,2),'th_',num2str(dilaterode,2),'di','.mat'), 'locationxyz')
+save(strcat(filename(1:end-1),'-',num2str(thlevel*100,2),'th_',num2str(dilaterode,2),'di','.mat'), 'locationxyz')
 
-%}
+%
