@@ -1,6 +1,10 @@
 %% Thresholding and Morphological Operators
 %
 function [Xauto,Yauto,Zauto_centroid,Zauto_mean,Zauto_min] = detection(Imin, zmap, thlevel, dilaterode);
+% ADD THIS PSYDO CODE SOMEWHERE AFTER DILATION
+% [CENTERS1, RADII1, METRIC1]=imfindcircles(th,[5,20]);
+% viscircles(CENTERS1, RADII1) % ONLY NEEDED FOR PLOTTING
+
 th = Imin<thlevel;
 disk1 = strel('disk', dilaterode, 0);
 th = imdilate(th,strel('disk', dilaterode, 0));
