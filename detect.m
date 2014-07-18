@@ -34,28 +34,35 @@ tic
 dirname = '';
 filename    = 'DH_';
 backgroundfile = 'background.mat';
-M=8.4; %Magnification
-ps=6.5E-6 / M; %Effective Pixel Size in meters
+M = 8.4; %Magnification
+ps = 6.5E-6; % Pixel Size in meters
 refractindex = 1.33;
-lambda=632.8E-9/refractindex; %laser wavelength in meters
+lambda = 632.8E-9; % Laser wavelength in meters
 z1=0.44E-3;
 z2=10.42E-3;
-steps=1001;
-Zin=linspace(z1,z2,steps);
-Zout=Zin;
+steps=101;
+vortloc=[1180, 2110, 2.7E-3]; %location of vorticella in "cuvette in focus"
+%vortloc=[1550,2160]; %location of vorticella in "vort in focus"
+thlevel = 0.02;
+dilaterode=2;
 zpad=4096;
 %maxint=2.5; %overide default max intensity: 2*mean(Imin(:))
 %test=1;
 radix2=1024;
-rect = [1550-512,2070-1024,1023,1023];
-vortloc=[490, 965, 2.7E-3]; %location of vorticella in "cuvette in focus"
-%vortloc=[1550,2160]; %location of vorticella in "vort in focus"
-thlevel = 0.02;
-dilaterode=2;
-firstframe = 1;
+firstframe = 4;
 lastframe = 'numfiles';
-lastframe = '3';
-skipframes = 1;
+lastframe = '4';
+skipframes = 1; % skipframes = 1 is default
+
+load('constants.mat')
+
+Zin=linspace(z1,z2,steps);
+Zout=Zin;
+rect = [1550-512,2070-1024,1023,1023]; %for "vort in focus" data
+%rect = [vortloc(1)-512,vortloc(2)-1024,1023,1023]; %for "cevette in focus" data
+ps = ps / M; % Effective Pixel Size in meters
+lambda = lambda / refractindex; % Effective laser wavelength in meters
+
 
 
 filename = strcat(dirname,filename);
@@ -99,13 +106,14 @@ end
 Eout(numfiles).time=[];
 loop = 0;
 numframes = floor((eval(lastframe) - firstframe)/skipframes);
-wb = waitbar(1/numframes,'Analysing Data for Imin');
+wb = waitbar(0/numframes,'Analysing Data for Imin');
 for L=firstframe:skipframes:eval(lastframe)
     loop = loop + 1;
     % import data from tif files.
     % Ein = (double(imread([filesort(L).name])));
     Holo = (double(imread([filesort(L).name]))./background);
-    Ein = imcrop(Holo,rect);
+    Ein = Holo;
+%     Ein = imcrop(Holo,rect);
     % Ein=Ein(vortloc(2)-radix2+1:vortloc(2),vortloc(1)-radix2/2:vortloc(1)-1+radix2/2);
     %Ein=Ein(1882-768:1882+255,1353-511:1353+512);
     %Ein = (double(background));
