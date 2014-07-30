@@ -43,14 +43,14 @@ z1=0E-3;
 z2=7.9E-3;
 steps=501;
 vortloc=[1180, 2110, 2.7E-3]; %location of vorticella in "cuvette in focus"
-vortloc=[1540, 2105, 0]; %location of vorticella in "vort in focus"
+% vortloc=[1540, 2105, 0]; %location of vorticella in "vort in focus"
 thlevel = 0.0002;
 dilaterode=5;
 zpad=4096;
 radix2=2048;
 firstframe = 1;
 lastframe = 'numfiles';
-% lastframe = '10';
+lastframe = '200';
 skipframes = 1; % skipframes = 1 is default
 IminPathStr = 'matfiles';
 OutputPathStr = 'analysis';
@@ -61,9 +61,10 @@ load('constants.mat')
 
 Zin=linspace(z1,z2,steps);
 Zout=Zin;
-rect = [vortloc(1)-512,vortloc(2)-1024,1023,1023]; %for "cuvette in focus" data
-%rect = [1550-512,2070-1024,1023,1023]; %for "vort in focus" data
-rect = [2560-radix2,2160-radix2,radix2-1,radix2-1]; %bottom right
+% rect = [vortloc(1)-512,vortloc(2)-1024,1023,1023]; %for "cuvette in focus" data
+% rect = [1550-512,2070-1024,1023,1023]; %for "vort in focus" data
+% rect = [2560-radix2,2160-radix2,radix2-1,radix2-1]; %bottom right
+rect = [vortloc(1)-radix2/2,vortloc(2)-radix2,radix2-1,radix2-1]; %Cropping
 
 ps = ps / mag; % Effective Pixel Size in meters
 lambda = lambda / refractindex; % Effective laser wavelength in meters
@@ -219,12 +220,12 @@ for L=firstframe:skipframes:eval(lastframe)
 
 
     %% Detect Particle Centroids and Save
-    [Xauto,Yauto,Zauto_centroid,Zauto_mean,Zauto_min] = detection(Imin, zmap, thlevel, dilaterode, disk0, disk1);
-    % [Xauto,Yauto,Zauto_centroid,Zauto_mean,Zauto_min,Xcircles,Ycircles,Zcircles] = detection(Imin, zmap, thlevel, dilaterode, disk0, disk1);
+%     [Xauto,Yauto,Zauto_centroid,Zauto_mean,Zauto_min] = detection(Imin, zmap, thlevel, dilaterode, disk0, disk1);
+    [Xauto,Yauto,Zauto_centroid,Zauto_mean,Zauto_min,Xcircles,Ycircles,Zcircles] = detection(Imin, zmap, thlevel, dilaterode, disk0, disk1);
     LocCentroid(loop).time=[Xauto;Yauto;Zauto_centroid;Zauto_mean;Zauto_min]';
-    % LocCircle(loop).time=[Xcircles;Ycircles;Zcircles]';
+    LocCircle(loop).time=[Xcircles;Ycircles;Zcircles]';
 
-    save([OutputPathStr,'\',filename(1:end-1),'-circ-','th',num2str(thlevel*10000,2),'_dernum',num2str(dilaterode,2),'.mat'], 'LocCentroid', 'LocCircle')
+    save([OutputPathStr,'\',filename(1:end-1),'-th',num2str(thlevel*1E4,'%d'),'_dernum',num2str(dilaterode,2),'.mat'], 'LocCentroid', 'LocCircle')
     
     waitbar(loop/numframes,wb);
 end
