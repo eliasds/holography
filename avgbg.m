@@ -6,6 +6,7 @@ function background = avgbg(varargin)
 
 background = 0;
 saveon = 0;
+firstframe = 1;
 try
     gpu_num = gpuDeviceCount; %Determines if there is a CUDA enabled GPU
 catch err
@@ -43,6 +44,16 @@ while ~isempty(varargin)
             saveon = 1;
             varargin(1) = [];
             
+        case 'ODD'
+            varargin(1) = [];
+            firstframe = 1;
+            step = 2;
+            
+        case 'EVEN'
+            varargin(1) = [];
+            firstframe = 2;
+            step = 2;
+            
         otherwise
             error(['Unexpected option: ' varargin{1}])
     end
@@ -56,7 +67,7 @@ if gpu_num > 0;
 end
 
 wb = waitbar(1/numfiles,['importing files']);
-for L=1:numfiles
+for L=firstframe:step:numfiles
     background=background+double(imread(filesort(L).name));
     waitbar(L/numfiles,wb);
 end
