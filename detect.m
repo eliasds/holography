@@ -34,30 +34,33 @@ tic
 
 dirname = '';
 filename    = 'DH_';
-backgroundfile = 'background.mat';
+backgroundfile = 'DH_0001_double.mat';
 mag = 8.4; %Magnification
 ps = 6.5E-6; % Pixel Size in meters
 refractindex = 1.33;
 lambda = 632.8E-9; % Laser wavelength in meters
-z1=0E-3;
-z2=7.9E-3;
+% z1=0E-3;
+% z2=7.9E-3;
 steps=501;
-vortloc=[1180, 2110, 2.7E-3]; %location of vorticella in "cuvette in focus"
-% vortloc=[1540, 2105, 0]; %location of vorticella in "vort in focus"
-thlevel = 0.0002;
-dilaterode=5;
+% vortloc=[1180, 2110, 2.7E-3]; %location of vorticella in "cuvette in focus"
+% vortloc=[1535, 2105, 0]; %location of vorticella in "vort in focus"
+% thlevel = 0.0005;
+dilaterode = 5;
+derstr = 'D1E0R8D1D1';
 zpad=4096;
 radix2=2048;
 firstframe = 1;
 lastframe = 'numfiles';
-lastframe = '200';
-skipframes = 1; % skipframes = 1 is default
+lastframe = '11';
+skipframes = 5; % skipframes = 1 is default
 IminPathStr = 'matfiles';
 OutputPathStr = 'analysis';
 % maxint=2; %overide default max intensity: 2*mean(Imin(:))
 % test=1;
 
+
 load('constants.mat')
+thlevel = 0.55;
 
 Zin=linspace(z1,z2,steps);
 Zout=Zin;
@@ -65,6 +68,7 @@ Zout=Zin;
 % rect = [1550-512,2070-1024,1023,1023]; %for "vort in focus" data
 % rect = [2560-radix2,2160-radix2,radix2-1,radix2-1]; %bottom right
 rect = [vortloc(1)-radix2/2,vortloc(2)-radix2,radix2-1,radix2-1]; %Cropping
+rect = [0,0,2048,2048]; %temp Cropping
 
 ps = ps / mag; % Effective Pixel Size in meters
 lambda = lambda / refractindex; % Effective laser wavelength in meters
@@ -80,7 +84,7 @@ filesort = dir([filename,'*.tif']);
 numfiles = numel(filesort);
 numframes = floor((eval(lastframe) - firstframe + 1)/skipframes);
 LocCentroid(numframes).time=[];
-LocCircle(numframes).time=[];
+% LocCircle(numframes).time=[];
 Eout(numfiles).time=[];
 for L = 1:numfiles
     [filesort(L).pathstr, filesort(L).firstname, filesort(L).ext] = ...
@@ -118,6 +122,7 @@ end
 Ein = gather((double(imread([filesort(1).name]))./background));
 % Ein = gather((double(imread([filesort(1).name]))));
 % Ein = gather(double(background));
+Ein = gather((double(imread([filesort(1).name]))./double(imread([filesort(6).name]))));
 if ~exist('maxint')
     maxint=2*mean(Ein(:));
 end
@@ -126,7 +131,8 @@ if exist('test')
     numfiles=test;
 end
 
-% Create Dilate and Erode Parameters
+
+%% Create Dilate and Erode Parameters
 if dilaterode <= 3
     disk0 = logical(ones(dilaterode-1));
     disk1 = logical(ones(dilaterode));
@@ -198,8 +204,11 @@ wb = waitbar(0/numframes,'Analysing Data for Imin and Detecting Particles');
 for L=firstframe:skipframes:eval(lastframe)
     loop = loop + 1;
     % import data from tif files.
-    % Ein = (double(imread([filesort(L).name])));
-    Ein = (double(imread([filesort(L).name]))./background);
+    % Ein = (double(imread([filesort(L).name])));o
+    Holo = background;
+    background = double(imread([filesort(L+skipframes).name]));
+    Ein = Holo./background;
+    % Ein = (double(imread([filesort(L).name]))./background);
     Ein = imcrop(Ein,rect);
     % Ein=Ein(vortloc(2)-radix2+1:vortloc(2),vortloc(1)-radix2/2:vortloc(1)-1+radix2/2);
     %Ein=Ein(1882-768:1882+255,1353-511:1353+512);
@@ -219,13 +228,12 @@ for L=firstframe:skipframes:eval(lastframe)
 
 
 
-    %% Detect Particle Centroids and Save
-%     [Xauto,Yauto,Zauto_centroid,Zauto_mean,Zauto_min] = detection(Imin, zmap, thlevel, dilaterode, disk0, disk1);
-    [Xauto,Yauto,Zauto_centroid,Zauto_mean,Zauto_min,Xcircles,Ycircles,Zcircles] = detection(Imin, zmap, thlevel, dilaterode, disk0, disk1);
+    %% Detect Particles and Save
+    [Xauto,Yauto,Zauto_centroid,Zauto_mean,Zauto_min] = detection(Imin, zmap, thlevel, disk0, disk1, derstr);
+%     [Xauto,Yauto,Zauto_centroid,Zauto_mean,Zauto_min,Xcircles,Ycircles,Zcircles] = detection(Imin, zmap, thlevel, dilaterode, disk0, disk1);
     LocCentroid(loop).time=[Xauto;Yauto;Zauto_centroid;Zauto_mean;Zauto_min]';
-    LocCircle(loop).time=[Xcircles;Ycircles;Zcircles]';
+%     LocCircle(loop).time=[Xcircles;Ycircles;Zcircles]';
 
-    save([OutputPathStr,'\',filename(1:end-1),'-th',num2str(thlevel*1E4,'%d'),'_dernum',num2str(dilaterode,2),'.mat'], 'LocCentroid', 'LocCircle')
     
     waitbar(loop/numframes,wb);
 end
@@ -234,6 +242,7 @@ Ein=gather(Ein);
 background=gather(background);
 maxint=gather(maxint);
 close(wb);
+save([OutputPathStr,'\',filename(1:end-1),'-th',num2str(thlevel,'%10.0E'),'_dernum',num2str(dilaterode,2),'_day',num2str(round(now*1E5)),'.mat'], 'LocCentroid')
 toc
 %}
 
@@ -248,8 +257,6 @@ for L=firstframe:skipframes:eval(lastframe)
     % Ein = (double(imread([filesort(L).name])));
     Ein = (double(imread([filesort(L).name]))./background);
     Ein = imcrop(Ein,rect);
-    % Ein=Ein(vortloc(2)-radix2+1:vortloc(2),vortloc(1)-radix2/2:vortloc(1)-1+radix2/2);
-    %Ein=Ein(1882-768:1882+255,1353-511:1353+512);
     %Ein = (double(background));
     %Ein(isnan(Ein)) = mean(background(:));
     Ein(Ein>maxint)=maxint;
@@ -314,11 +321,9 @@ toc
 
 
 
-%% Detect Particle Centroids and Save
+%% Detect Particles and Save
 %{
 loop = 0;
-LocCentroid(numframes).time=[];
-LocCircle(numframes).time=[];
 wb = waitbar(0/numframes,'Locating Particle Locations from Data');
 %for L=1:numframes
 for L=firstframe:skipframes:eval(lastframe)
@@ -328,16 +333,16 @@ for L=firstframe:skipframes:eval(lastframe)
     % load data from mat files.
     load([IminPathStr,'\',filesort(L).firstname,'.mat']);
     % 
-%     [Xauto,Yauto,Zauto_centroid,Zauto_mean,Zauto_min] = detection(Imin, zmap, thlevel, dilaterode, disk0, disk1);
-    [Xauto,Yauto,Zauto_centroid,Zauto_mean,Zauto_min,Xcircles,Ycircles,Zcircles] = detection(Imin, zmap, thlevel, dilaterode, disk0, disk1);
+    [Xauto,Yauto,Zauto_centroid,Zauto_mean,Zauto_min] = detection(Imin, zmap, thlevel, disk0, disk1, derstr);
+%     [Xauto,Yauto,Zauto_centroid,Zauto_mean,Zauto_min,Xcircles,Ycircles,Zcircles] = detection(Imin, zmap, thlevel, dilaterode, disk0, disk1);
     LocCentroid(loop).time=[Xauto;Yauto;Zauto_centroid;Zauto_mean;Zauto_min]';
-    LocCircle(loop).time=[Xcircles;Ycircles;Zcircles]';
+%     LocCircle(loop).time=[Xcircles;Ycircles;Zcircles]';
     %
     %
     waitbar(loop/numframes,wb);
 end
 
 close(wb);
-save([OutputPathStr,'\',filename(1:end-1),'-circ-','th',num2str(thlevel*10000,2),'_dernum',num2str(dilaterode,2),'.mat'], 'LocCentroid', 'LocCircle')
+save([OutputPathStr,'\',filename(1:end-1),'-th',num2str(thlevel,'%10.0E'),'_dernum',num2str(dilaterode,2),'_day',num2str(round(now*1E5)),'.mat'], 'LocCentroid')
 %}
 toc
