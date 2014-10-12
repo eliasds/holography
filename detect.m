@@ -51,7 +51,7 @@ zpad=4096;
 radix2=2048;
 firstframe = 1;
 lastframe = 'numfiles';
-lastframe = '11';
+lastframe = '491';
 skipframes = 5; % skipframes = 1 is default
 IminPathStr = 'matfiles';
 OutputPathStr = 'analysis';
@@ -96,7 +96,7 @@ end
 %
 varnam=who('-file',backgroundfile);
 background=load(backgroundfile,varnam{1});
-background=gpuArray(background.(varnam{1}));
+% background=gpuArray(background.(varnam{1}));
 
 if ~exist(OutputPathStr, 'dir')
   mkdir(OutputPathStr);
@@ -119,7 +119,7 @@ end
 
 %
 
-Ein = gather((double(imread([filesort(1).name]))./background));
+% Ein = gather((double(imread([filesort(1).name]))./background));
 % Ein = gather((double(imread([filesort(1).name]))));
 % Ein = gather(double(background));
 Ein = gather((double(imread([filesort(1).name]))./double(imread([filesort(6).name]))));
@@ -198,7 +198,7 @@ end
 
 
 %% Create Imin MAT files and run Particle Detection together
-%
+%{
 loop = 0;
 wb = waitbar(0/numframes,'Analysing Data for Imin and Detecting Particles');
 for L=firstframe:skipframes:eval(lastframe)
@@ -229,10 +229,8 @@ for L=firstframe:skipframes:eval(lastframe)
 
 
     %% Detect Particles and Save
-    [Xauto,Yauto,Zauto_centroid,Zauto_mean,Zauto_min] = detection(Imin, zmap, thlevel, disk0, disk1, derstr);
-%     [Xauto,Yauto,Zauto_centroid,Zauto_mean,Zauto_min,Xcircles,Ycircles,Zcircles] = detection(Imin, zmap, thlevel, dilaterode, disk0, disk1);
-    LocCentroid(loop).time=[Xauto;Yauto;Zauto_centroid;Zauto_mean;Zauto_min]';
-%     LocCircle(loop).time=[Xcircles;Ycircles;Zcircles]';
+    [Xauto_min,Yauto_min,Zauto_min,Xauto_centroid,Yauto_centroid,Zauto_centroid] = detection(Imin, zmap, thlevel, disk0, disk1, derstr);
+    LocCentroid(loop).time=[Xauto_min,Yauto_min,Zauto_min,Xauto_centroid,Yauto_centroid,Zauto_centroid]';
 
     
     waitbar(loop/numframes,wb);
@@ -322,7 +320,7 @@ toc
 
 
 %% Detect Particles and Save
-%{
+%
 loop = 0;
 wb = waitbar(0/numframes,'Locating Particle Locations from Data');
 %for L=1:numframes
@@ -331,18 +329,17 @@ for L=firstframe:skipframes:eval(lastframe)
 
 
     % load data from mat files.
-    load([IminPathStr,'\',filesort(L).firstname,'.mat']);
+    load([IminPathStr,'/',filesort(L).firstname,'.mat']);
     % 
-    [Xauto,Yauto,Zauto_centroid,Zauto_mean,Zauto_min] = detection(Imin, zmap, thlevel, disk0, disk1, derstr);
-%     [Xauto,Yauto,Zauto_centroid,Zauto_mean,Zauto_min,Xcircles,Ycircles,Zcircles] = detection(Imin, zmap, thlevel, dilaterode, disk0, disk1);
-    LocCentroid(loop).time=[Xauto;Yauto;Zauto_centroid;Zauto_mean;Zauto_min]';
-%     LocCircle(loop).time=[Xcircles;Ycircles;Zcircles]';
+    %% Detect Particles and Save
+    [Xauto_min,Yauto_min,Zauto_min,Xauto_centroid,Yauto_centroid,Zauto_centroid] = detection(Imin, zmap, thlevel, disk0, disk1, derstr);
+    LocCentroid(loop).time=[Xauto_min,Yauto_min,Zauto_min,Xauto_centroid,Yauto_centroid,Zauto_centroid]';
     %
     %
     waitbar(loop/numframes,wb);
 end
 
 close(wb);
-save([OutputPathStr,'\',filename(1:end-1),'-th',num2str(thlevel,'%10.0E'),'_dernum',num2str(dilaterode,2),'_day',num2str(round(now*1E5)),'.mat'], 'LocCentroid')
+save([OutputPathStr,'/',filename(1:end-1),'-th',num2str(thlevel,'%10.0E'),'_dernum',num2str(dilaterode,2),'_day',num2str(round(now*1E5)),'.mat'], 'LocCentroid')
 %}
 toc
