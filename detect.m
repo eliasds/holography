@@ -60,7 +60,7 @@ OutputPathStr = 'analysis';
 
 
 load('constants.mat')
-thlevel = 0.55;
+thlevel = 0.6;
 
 Zin=linspace(z1,z2,steps);
 Zout=Zin;
@@ -84,7 +84,6 @@ filesort = dir([filename,'*.tif']);
 numfiles = numel(filesort);
 numframes = floor((eval(lastframe) - firstframe + 1)/skipframes);
 LocCentroid(numframes).time=[];
-% LocCircle(numframes).time=[];
 Eout(numfiles).time=[];
 for L = 1:numfiles
     [filesort(L).pathstr, filesort(L).firstname, filesort(L).ext] = ...
@@ -230,7 +229,7 @@ for L=firstframe:skipframes:eval(lastframe)
 
     %% Detect Particles and Save
     [Xauto_min,Yauto_min,Zauto_min,Xauto_centroid,Yauto_centroid,Zauto_centroid] = detection(Imin, zmap, thlevel, disk0, disk1, derstr);
-    LocCentroid(loop).time=[Xauto_min,Yauto_min,Zauto_min,Xauto_centroid,Yauto_centroid,Zauto_centroid]';
+    LocCentroid(loop).time=[Xauto_min;Yauto_min;Zauto_min;Xauto_centroid;Yauto_centroid;Zauto_centroid]';
 
     
     waitbar(loop/numframes,wb);
@@ -333,7 +332,7 @@ for L=firstframe:skipframes:eval(lastframe)
     % 
     %% Detect Particles and Save
     [Xauto_min,Yauto_min,Zauto_min,Xauto_centroid,Yauto_centroid,Zauto_centroid] = detection(Imin, zmap, thlevel, disk0, disk1, derstr);
-    LocCentroid(loop).time=[Xauto_min,Yauto_min,Zauto_min,Xauto_centroid,Yauto_centroid,Zauto_centroid]';
+    LocCentroid(loop).time=[Xauto_min;Yauto_min;Zauto_min;Xauto_centroid;Yauto_centroid;Zauto_centroid]';
     %
     %
     waitbar(loop/numframes,wb);

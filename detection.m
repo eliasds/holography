@@ -81,8 +81,8 @@ for i = 1:numel(autodetstruct)
     idx = autodetstruct(i).PixelIdxList;
     particlepixels = Imin(idx);
     [~,minidx] = min(particlepixels);
-    Xauto_min(i) = rem(idx(minidx),2048);
-    Yauto_min(i) = ceil(idx(minidx)/2048);
+    Xauto_min(i) = ceil(idx(minidx)/2048);
+    Yauto_min(i) = rem(idx(minidx),2048);
     Zauto_min(i) = zmap(idx(minidx));
 end
 
