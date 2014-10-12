@@ -1,6 +1,6 @@
 %% Thresholding and Morphological Operators
 %
-function [Xauto,Yauto,Zauto_centroid,Zauto_mean,Zauto_min] = detection(Imin, zmap, thlevel, disk0, disk1, derstr);
+function [Xauto_min,Yauto_min,Zauto_min,Xauto_centroid,Yauto_centroid,Zauto_centroid] = detection(Imin, zmap, thlevel, disk0, disk1, derstr);
 
 th = Imin<thlevel;
 
@@ -50,25 +50,6 @@ th = imerode(th,disk0);
 th = bwareaopen(th, 8);
 th = imdilate(th,disk1);
 th = imdilate(th,disk1);
-% th = imerode(th,disk);
-% th = imdilate(th,disk);
-% th = imerode(th,disk);
-%}
-
-%% Part for finding Cricles
-%{
-% [CENTERS1, RADII1, METRIC1]=imfindcircles(th,[6,32]); %Used for Vort in Focus
-[CENTERS1, RADII1, METRIC1]=imfindcircles(th,[8,18]); %Used for Cuvette in Focus
-% viscircles(CENTERS1, RADII1) % ONLY NEEDED FOR PLOTTING
-
-Xcircles = CENTERS1(:,1)';
-Ycircles = CENTERS1(:,2)';
-
-% Depth of Circle Center intensity pixel
-Zcircles = zeros(size(Xcircles));
-for L = 1:length(CENTERS1(:,1))
-    Zcircles(L) = zmap(round(Ycircles(L)),round(Xcircles(L)))';
-end
 %}
 
 %% Dilate or Erode with a single number
@@ -84,23 +65,25 @@ end
 %% Detect Structures
 th = bwlabel(th,4);
 autodetstruct = regionprops(th,'Centroid','PixelIdxList');
-xy = [autodetstruct.Centroid];
-Xauto = xy(1:2:end);
-Yauto = xy(2:2:end);
 
 % Linear Interpolation Method, using 4 pixels nearest centroid(X-Y) to
-%   determine z-depth. more acurate centroid method
-Zauto_centroid = interp2(1:size(zmap,2),1:size(zmap,1),zmap,Xauto,Yauto);
+%   determine z-depth.
+xy = [autodetstruct.Centroid];
+Xauto_centroid = xy(1:2:end);
+Yauto_centroid = xy(2:2:end);
+Zauto_centroid = interp2(1:size(zmap,2),1:size(zmap,1),zmap,Xauto_centroid,Yauto_centroid);
 
-% Determine mean Z-value from all pixels in region (biasing errors) and
-%   depth of minimum intensity pixel
-Zauto_mean=zeros(size(Xauto));
-Zauto_min=zeros(size(Xauto));
+% Determine X,Y,Z-values from minimum intensity pixel
+Xauto_min=zeros(size(autodetstruct))';
+Yauto_min=zeros(size(autodetstruct))';
+Zauto_min=zeros(size(autodetstruct))';
 for i = 1:numel(autodetstruct)
     idx = autodetstruct(i).PixelIdxList;
-    Zauto_mean(i) = mean(zmap(idx));
-    
     particlepixels = Imin(idx);
     [~,minidx] = min(particlepixels);
+    Xauto_min(i) = rem(idx(minidx),2048);
+    Yauto_min(i) = ceil(idx(minidx)/2048);
     Zauto_min(i) = zmap(idx(minidx));
 end
+
+
