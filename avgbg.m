@@ -8,6 +8,7 @@ background = 0;
 saveon = 0;
 count = 0;
 firstframe = 1;
+step = 1;
 try
     gpu_num = gpuDeviceCount; %Determines if there is a CUDA enabled GPU
 catch err
@@ -24,7 +25,7 @@ while ~isempty(varargin)
         case 'FILENAME'
             filename = varargin{2};
             [pathstr, filename, ext] = fileparts(filename);
-            strrep(filename, '*', '');
+            filename = strrep(filename, '*', '');
             varargin(1:2) = [];
             
         case 'CPU'
@@ -67,7 +68,7 @@ end
 wb = waitbar(1/numfiles,['importing files']);
 for L=firstframe:step:numfiles
     background=background+double(imread(filesort(L).name));
-    count = count + 1
+    count = count + 1;
     waitbar(L/numfiles,wb);
 end
 close(wb);
@@ -80,8 +81,8 @@ end
 if saveon == 1;
     save([outputFileName, '.mat'],'background');
     if max(background) > 256
-        imwrite(uint16(background), [outputFileName, '.tif'], 'tif');
+        imwrite(uint16(background), [outputFileName,ext], 'tif');
     else
-        imwrite(uint8(background), [outputFileName, '.tif'], 'tif');
+        imwrite(uint8(background), [outputFileName,ext], 'tif');
     end
 end
