@@ -47,13 +47,14 @@ end
 th = bwareaopen(th, 8);
 th = imdilate(th,disk1);
 th = imerode(th,disk0);
-th = bwareaopen(th, 8);
-th = imdilate(th,disk0);
-th = imerode(th,disk0);
-th = imdilate(th,disk1);
+% th = bwareaopen(th, 8);
+% th = imdilate(th,disk1);
+% th = imdilate(th,disk1);
 %}
 
 %% Dilate or Erode with a single number
+% th = imdilate(th,ones(4));
+% th = imerode(th,ones(4));
 % disk1 = strel('disk', dilaterode, 0);
 % th = imdilate(th,strel('disk', dilaterode, 0));
 % th = imerode(th,strel('disk', dilaterode, 0));

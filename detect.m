@@ -33,36 +33,36 @@ clear all
 tic
 
 dirname = '';
-filename    = 'DH_';
-filename    = '1E-5Dilute_';
+filename    = 'Basler_acA2040-25gm__21407047__20141125_173751726_';
+ext = 'tiff';
 backgroundfile = 'background.mat';
-mag = 8.4; %Magnification
-ps = 6.5E-6; % Pixel Size in meters
+mag = 4; %Magnification
+ps = 5.5E-6; % Pixel Size in meters
 refractindex = 1.33;
 lambda = 632.8E-9; % Laser wavelength in meters
 % z1=0E-3;
 % z2=7.9E-3;
-steps=501;
+steps=2201;
 % vortloc=[1180, 2110, 2.7E-3]; %location of vorticella in "cuvette in focus"
 % vortloc=[1535, 2105, 0]; %location of vorticella in "vort in focus"
 % thlevel = 0.0005;
-dilaterode = 4;
+dilaterode = 35;
 derstr = 'D1E0R8D1D1';
-zpad=4096;
+zpad=2048;
 radix2=2048;
 firstframe = 1;
 lastframe = 'numfiles';
-lastframe = '450';
+%lastframe = '10';
 skipframes = 1; % skipframes = 1 is default
+IminPathStr = 'matfiles-5imgBG';
 IminPathStr = 'matfiles';
-IminPathStr = '.';
-OutputPathStr = 'analysis';
+OutputPathStr = 'analysis-20141128';
 % maxint=2; %overide default max intensity: 2*mean(Imin(:))
 % test=1;
 
 
 load('constants.mat')
-thlevel = 0.3;
+thlevel = 0.03;
 
 Zin=linspace(z1,z2,steps);
 Zout=Zin;
@@ -82,7 +82,7 @@ warning('off','images:imfindcircles:warnForSmallRadius');
 
 
 filename = strcat(dirname,filename);
-filesort = dir([filename,'*.mat']);
+filesort = dir([filename,'*.',ext]);
 numfiles = numel(filesort);
 numframes = floor((eval(lastframe) - firstframe + 1)/skipframes);
 LocCentroid(numframes).time=[];
@@ -97,7 +97,7 @@ end
 %
 varnam=who('-file',backgroundfile);
 background=load(backgroundfile,varnam{1});
-% background=gpuArray(background.(varnam{1}));
+background=gpuArray(background.(varnam{1}));
 
 if ~exist(OutputPathStr, 'dir')
   mkdir(OutputPathStr);
@@ -123,10 +123,10 @@ end
 % Ein = gather((double(imread([filesort(1).name]))./background));
 % Ein = gather((double(imread([filesort(1).name]))));
 % Ein = gather(double(background));
-% Ein = gather((double(imread([filesort(1).name]))./double(imread([filesort(6).name]))));
-% if ~exist('maxint')
-%     maxint=2*mean(Ein(:));
-% end
+Ein = gather((double(imread([filesort(1).name]))./double(imread([filesort(skipframes+1).name]))));
+if ~exist('maxint')
+    maxint=2*mean(Ein(:));
+end
 
 if exist('test')
     numfiles=test;
@@ -188,6 +188,12 @@ elseif dilaterode == 9
     dilaterode = 9;
     [xx,yy] = ndgrid((1:dilaterode)-((dilaterode+1)/2),(1:dilaterode)-((dilaterode+1)/2));
     disk1 = (xx.^2 + yy.^2)<((dilaterode+1)/2)^2;
+elseif dilaterode == 35
+    dilaterode = 3;
+    disk0 = logical(ones(dilaterode));
+    dilaterode = 5;
+    disk1 = getnhood(strel('diamond', round((dilaterode)/2)));
+    disk1 = disk1(2:end-1,2:end-1);
 else
     [xx,yy] = ndgrid((1:dilaterode)-((dilaterode+1)/2),(1:dilaterode)-((dilaterode+1)/2));
     disk1 = (xx.^2 + yy.^2)<((dilaterode+1)/2)^2;
@@ -206,10 +212,10 @@ for L=firstframe:skipframes:eval(lastframe)
     loop = loop + 1;
     % import data from tif files.
     % Ein = (double(imread([filesort(L).name])));o
-    Holo = background;
-    background = double(imread([filesort(L+skipframes).name]));
-    Ein = Holo./background;
-    % Ein = (double(imread([filesort(L).name]))./background);
+%     Holo = background;
+%     background = double(imread([filesort(L+skipframes).name]));
+%     Ein = Holo./background;
+    Ein = (double(imread([filesort(L).name]))./background);
     Ein = imcrop(Ein,rect);
     % Ein=Ein(vortloc(2)-radix2+1:vortloc(2),vortloc(1)-radix2/2:vortloc(1)-1+radix2/2);
     %Ein=Ein(1882-768:1882+255,1353-511:1353+512);
