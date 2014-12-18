@@ -48,7 +48,8 @@ th = bwareaopen(th, 8);
 th = imdilate(th,disk1);
 th = imerode(th,disk0);
 th = bwareaopen(th, 8);
-th = imdilate(th,disk1);
+th = imdilate(th,disk0);
+th = imerode(th,disk0);
 th = imdilate(th,disk1);
 %}
 

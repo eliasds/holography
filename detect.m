@@ -34,6 +34,7 @@ tic
 
 dirname = '';
 filename    = 'DH_';
+filename    = '1E-5Dilute_';
 backgroundfile = 'background.mat';
 mag = 8.4; %Magnification
 ps = 6.5E-6; % Pixel Size in meters
@@ -41,27 +42,27 @@ refractindex = 1.33;
 lambda = 632.8E-9; % Laser wavelength in meters
 % z1=0E-3;
 % z2=7.9E-3;
-steps=2001;
+steps=501;
 % vortloc=[1180, 2110, 2.7E-3]; %location of vorticella in "cuvette in focus"
 % vortloc=[1535, 2105, 0]; %location of vorticella in "vort in focus"
 % thlevel = 0.0005;
-dilaterode = 5;
+dilaterode = 4;
 derstr = 'D1E0R8D1D1';
 zpad=4096;
 radix2=2048;
 firstframe = 1;
 lastframe = 'numfiles';
-lastframe = '200';
+lastframe = '450';
 skipframes = 1; % skipframes = 1 is default
-IminPathStr = 'matfiles-5imgBG';
 IminPathStr = 'matfiles';
-OutputPathStr = 'analysis-20141011';
+IminPathStr = '.';
+OutputPathStr = 'analysis';
 % maxint=2; %overide default max intensity: 2*mean(Imin(:))
 % test=1;
 
 
 load('constants.mat')
-thlevel = 5E-3;
+thlevel = 0.3;
 
 Zin=linspace(z1,z2,steps);
 Zout=Zin;
@@ -81,7 +82,7 @@ warning('off','images:imfindcircles:warnForSmallRadius');
 
 
 filename = strcat(dirname,filename);
-filesort = dir([filename,'*.tif']);
+filesort = dir([filename,'*.mat']);
 numfiles = numel(filesort);
 numframes = floor((eval(lastframe) - firstframe + 1)/skipframes);
 LocCentroid(numframes).time=[];
@@ -96,7 +97,7 @@ end
 %
 varnam=who('-file',backgroundfile);
 background=load(backgroundfile,varnam{1});
-background=gpuArray(background.(varnam{1}));
+% background=gpuArray(background.(varnam{1}));
 
 if ~exist(OutputPathStr, 'dir')
   mkdir(OutputPathStr);
@@ -122,10 +123,10 @@ end
 % Ein = gather((double(imread([filesort(1).name]))./background));
 % Ein = gather((double(imread([filesort(1).name]))));
 % Ein = gather(double(background));
-Ein = gather((double(imread([filesort(1).name]))./double(imread([filesort(skipframes+1).name]))));
-if ~exist('maxint')
-    maxint=2*mean(Ein(:));
-end
+% Ein = gather((double(imread([filesort(1).name]))./double(imread([filesort(6).name]))));
+% if ~exist('maxint')
+%     maxint=2*mean(Ein(:));
+% end
 
 if exist('test')
     numfiles=test;
