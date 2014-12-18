@@ -1,5 +1,6 @@
 %% Create a PSF from a 20um diameter Particle with magnification of 4x
 
+tic
 sizeM=512;
 mask0=ones(sizeM);
 titlepos=[sizeM/2 sizeM/10];
@@ -7,7 +8,7 @@ lambda = 632.8E-9;
 refractindex = 1.33;
 ps = 5.5E-6;
 mag = 4;
-Z=linspace(-5E-3,5E-3,11);
+Z=linspace(-5E-3,5E-3,501);
 
 
 circ = getnhood(strel('disk', 7, 0));
@@ -33,7 +34,7 @@ figure(802)
 imagesc(mask0); colorbar; colormap gray;
 handle=title('MASK'); set(handle,'Position',[titlepos(1),titlepos(2)]);
 
-[Eout]=propagate(Ein,lambda/refractindex,Z,ps/mag,'mask',mask0);
+[Eout]=propagate(Ein,lambda/refractindex,Z,ps/mag,'mask',mask0,'cpu');
 % psf=(fftshift(fft2(H)));
 Holo = (1+2*real(Eout)+abs(Eout).^2);
 
@@ -43,3 +44,5 @@ figure(804); imagesc(Holo(:,:,6),[0 max(Holo(:))]); colorbar; colormap gray;
 handle=title(['Engineered Hologram @ Z = ',num2str(1000*Z(6)),'mm']); set(handle,'Position',[titlepos(1),titlepos(2)]);
 figure(805); imagesc(Holo(:,:,end),[0 max(Holo(:))]); colorbar; colormap gray;
 handle=title(['Engineered Hologram @ Z = ',num2str(1000*Z(end)),'mm']); set(handle,'Position',[titlepos(1),titlepos(2)]);
+
+toc
