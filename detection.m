@@ -1,6 +1,6 @@
 %% Thresholding and Morphological Operators
 %
-function [Xauto_min,Yauto_min,Zauto_min,Xauto_centroid,Yauto_centroid,Zauto_centroid] = detection(Imin, zmap, thlevel, disk0, disk1, derstr);
+function [Xauto_min,Yauto_min,Zauto_min] = detection(Imin, zmap, thlevel, disk0, disk1, derstr);
 
 th = Imin<thlevel;
 
@@ -68,13 +68,6 @@ th = imerode(th,disk0);
 th = bwlabel(th,4);
 autodetstruct = regionprops(th,'Centroid','PixelIdxList');
 
-% Linear Interpolation Method, using 4 pixels nearest centroid(X-Y) to
-%   determine z-depth.
-xy = [autodetstruct.Centroid];
-Xauto_centroid = xy(1:2:end);
-Yauto_centroid = xy(2:2:end);
-Zauto_centroid = interp2(1:size(zmap,2),1:size(zmap,1),zmap,Xauto_centroid,Yauto_centroid);
-
 % Determine X,Y,Z-values from minimum intensity pixel
 Xauto_min=zeros(size(autodetstruct))';
 Yauto_min=zeros(size(autodetstruct))';
@@ -83,8 +76,8 @@ for i = 1:numel(autodetstruct)
     idx = autodetstruct(i).PixelIdxList;
     particlepixels = Imin(idx);
     [~,minidx] = min(particlepixels);
-    Xauto_min(i) = ceil(idx(minidx)/2048);
-    Yauto_min(i) = rem(idx(minidx),2048);
+    Xauto_min(i) = ceil(idx(minidx)/1024);
+    Yauto_min(i) = rem(idx(minidx),1024);
     Zauto_min(i) = zmap(idx(minidx));
 end
 
