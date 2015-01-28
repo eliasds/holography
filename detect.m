@@ -33,51 +33,51 @@ clear all
 tic
 
 dirname = '';
-filename    = 'Basler_acA2040-25gm__21407047__20141125_173751726_';
+filename    = 'Basler_acA2040-25gm__21407047__20150121_170705065_';
 ext = 'tiff';
 backgroundfile = 'background.mat';
-mag = 4; %Magnification
-ps = 5.5E-6; % Pixel Size in meters
-refractindex = 1.33;
-lambda = 632.8E-9; % Laser wavelength in meters
-% z1=0E-3;
-% z2=7.9E-3;
-steps=2201;
+% mag = 4; %Magnification
+% ps = 5.5E-6; % Pixel Size in meters
+% refractindex = 1.33;
+% lambda = 632.8E-9; % Laser wavelength in meters
+% z1=1.6E-3;
+% z2=7.3E-3;
+% stepsize=5e-6;
+% steps=1+(z2-z1)/stepsize;
 % vortloc=[1180, 2110, 2.7E-3]; %location of vorticella in "cuvette in focus"
 % vortloc=[1535, 2105, 0]; %location of vorticella in "vort in focus"
 % thlevel = 0.0005;
-dilaterode = 35;
+dilaterode = 4;
 derstr = 'D1E0R8D1D1';
-zpad=2048;
-radix2=2048;
+% zpad=2048;
+% radix2=2048;
 firstframe = 1;
 lastframe = 'numfiles';
-%lastframe = '10';
+% lastframe = '2';
 skipframes = 1; % skipframes = 1 is default
-IminPathStr = 'matfiles-5imgBG';
+% IminPathStr = 'matfiles-5imgBG';
 IminPathStr = 'matfiles';
-OutputPathStr = 'analysis-20141128';
+OutputPathStr = 'analysis-20150128';
 % maxint=2; %overide default max intensity: 2*mean(Imin(:))
 % test=1;
-
-
 load('constants.mat')
-thlevel = 0.03;
+% thlevel = 0.005;
 
-Zin=linspace(z1,z2,steps);
-Zout=Zin;
+Z=linspace(z1,z2,steps);
 % rect = [vortloc(1)-512,vortloc(2)-1024,1023,1023]; %for "cuvette in focus" data
 % rect = [1550-512,2070-1024,1023,1023]; %for "vort in focus" data
 % rect = [2560-radix2,2160-radix2,radix2-1,radix2-1]; %bottom right
-rect = [vortloc(1)-radix2/2,vortloc(2)-radix2,radix2-1,radix2-1]; %Cropping
-rect = [0,0,2048,2048]; %temp Cropping
+% rect = [vortloc(1)-radix2/2,vortloc(2)-radix2,radix2-1,radix2-1]; %Cropping
+rect = [1,1,2047,2047]; %temp Cropping
+rect = [650-512,1865-1024,1023,1023];
+rect = [1,65,1799,1799];
 
-ps = ps / mag; % Effective Pixel Size in meters
-lambda = lambda / refractindex; % Effective laser wavelength in meters
+% ps = ps / mag; % Effective Pixel Size in meters
+% lambda = lambda / refractindex; % Effective laser wavelength in meters
 
-
-warning('off','images:imfindcircles:warnForLargeRadiusRange');
-warning('off','images:imfindcircles:warnForSmallRadius');
+% 
+% warning('off','images:imfindcircles:warnForLargeRadiusRange');
+% warning('off','images:imfindcircles:warnForSmallRadius');
 
 
 
@@ -106,6 +106,7 @@ end
 if ~exist(IminPathStr, 'dir')
   mkdir(IminPathStr);
 end
+
 
 % for L=1:1:numfiles
 % %     Holo = imread([filesort(L).name]);
@@ -206,6 +207,11 @@ end
 
 %% Create Imin MAT files and run Particle Detection together
 %{
+
+save([IminPathStr,'/','constants.mat'], 'lambda', 'mag', 'maxint',...
+    'ps', 'refractindex', 'steps', 'stepsize', 'thlevel', 'vortloc',...
+    'z0', 'z1', 'z2', 'z3', 'z4')
+
 loop = 0;
 wb = waitbar(0/numframes,'Analysing Data for Imin and Detecting Particles');
 for L=firstframe:skipframes:eval(lastframe)
@@ -224,7 +230,7 @@ for L=firstframe:skipframes:eval(lastframe)
     Ein(Ein>maxint)=maxint;
 
     
-    [Imin, zmap] = imin(Ein,lambda,Zout,ps,zpad);
+    [Imin, zmap] = imin(Ein,lambda,Z,ps,zpad);
     save([IminPathStr,'\',filesort(L).firstname,'.mat'],'Imin','zmap','-v7.3');
     
     
@@ -254,6 +260,11 @@ toc
 
 %% Create Imin MAT files only
 %{
+
+save([IminPathStr,'/','constants.mat'], 'lambda', 'mag', 'maxint',...
+    'ps', 'refractindex', 'steps', 'stepsize', 'thlevel', 'vortloc',...
+    'z0', 'z1', 'z2', 'z3', 'z4')
+
 loop = 0;
 wb = waitbar(0/numframes,'Analysing Data for Imin');
 for L=firstframe:skipframes:eval(lastframe)
@@ -267,7 +278,7 @@ for L=firstframe:skipframes:eval(lastframe)
     Ein(Ein>maxint)=maxint;
 
     
-    [Imin, zmap] = imin(Ein,lambda,Zout,ps,zpad);
+    [Imin, zmap] = imin(Ein,lambda/refractindex,Z,ps/mag,zpad);
     save([IminPathStr,'\',filesort(L).firstname,'.mat'],'Imin','zmap','-v7.3');
     
     
@@ -337,10 +348,12 @@ for L=firstframe:skipframes:eval(lastframe)
 
     % load data from mat files.
     load([IminPathStr,'/',filesort(L).firstname,'.mat']);
+    Imin=imcrop(Imin,rect);
+    zmap=imcrop(zmap,rect);
     % 
     %% Detect Particles and Save
-    [Xauto_min,Yauto_min,Zauto_min,Xauto_centroid,Yauto_centroid,Zauto_centroid] = detection(Imin, zmap, thlevel, disk0, disk1, derstr);
-    LocCentroid(loop).time=[Xauto_min;Yauto_min;Zauto_min;Xauto_centroid;Yauto_centroid;Zauto_centroid]';
+    [Xauto_min,Yauto_min,Zauto_min] = detection(Imin, zmap, thlevel, disk0, disk1, derstr);
+    LocCentroid(loop).time=[Xauto_min;Yauto_min;Zauto_min]';
     %
     %
     waitbar(loop/numframes,wb);
