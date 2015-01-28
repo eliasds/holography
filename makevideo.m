@@ -1,4 +1,4 @@
-function [] = makevideo(inputFileName, varargin)
+function makevideo(inputFileName, varargin)
 %% Create a video from any series of image inputs
 % Version 3.0
 % inputs:
