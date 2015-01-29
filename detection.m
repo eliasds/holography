@@ -3,6 +3,7 @@
 function [Xauto_min,Yauto_min,Zauto_min] = detection(Imin, zmap, thlevel, disk0, disk1, derstr);
 
 th = Imin<thlevel;
+[m,n]=size(Imin);
 
 %{
 derstr = 'D1E0R8D1D1';
@@ -76,8 +77,8 @@ for i = 1:numel(autodetstruct)
     idx = autodetstruct(i).PixelIdxList;
     particlepixels = Imin(idx);
     [~,minidx] = min(particlepixels);
-    Xauto_min(i) = ceil(idx(minidx)/1024);
-    Yauto_min(i) = rem(idx(minidx),1024);
+    Xauto_min(i) = ceil(idx(minidx)/m);
+    Yauto_min(i) = rem(idx(minidx),m);
     Zauto_min(i) = zmap(idx(minidx));
 end
 
