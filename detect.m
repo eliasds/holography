@@ -33,7 +33,7 @@ clear all
 tic
 
 dirname = '';
-filename    = 'Basler_acA2040-25gm__21407047__20150121_170705065_';
+filename    = 'Basler_acA2040-25gm__21407047__20150121_162008320_';
 ext = 'tiff';
 backgroundfile = 'background.mat';
 % mag = 4; %Magnification
@@ -70,7 +70,7 @@ Z=linspace(z1,z2,steps);
 % rect = [vortloc(1)-radix2/2,vortloc(2)-radix2,radix2-1,radix2-1]; %Cropping
 rect = [1,1,2047,2047]; %temp Cropping
 rect = [650-512,1865-1024,1023,1023];
-rect = [1,65,1799,1799];
+rect = [Xceil,Yceil,Xfloor-Xceil-1,Yfloor-Yceil-1];
 
 % ps = ps / mag; % Effective Pixel Size in meters
 % lambda = lambda / refractindex; % Effective laser wavelength in meters
@@ -222,17 +222,16 @@ for L=firstframe:skipframes:eval(lastframe)
 %     background = double(imread([filesort(L+skipframes).name]));
 %     Ein = Holo./background;
     Ein = (double(imread([filesort(L).name]))./background);
-    Ein = imcrop(Ein,rect);
+%     Ein = imcrop(Ein,rect);
     % Ein=Ein(vortloc(2)-radix2+1:vortloc(2),vortloc(1)-radix2/2:vortloc(1)-1+radix2/2);
     %Ein=Ein(1882-768:1882+255,1353-511:1353+512);
     %Ein = (double(background));
     %Ein(isnan(Ein)) = mean(background(:));
     Ein(Ein>maxint)=maxint;
 
-    
-    [Imin, zmap] = imin(Ein,lambda,Z,ps,zpad);
+    [Imin, zmap] = imin(Ein,lambda/refractindex,Z,ps/mag,zpad);
     save([IminPathStr,'\',filesort(L).firstname,'.mat'],'Imin','zmap','-v7.3');
-    
+        
     
     % The following 3 lines saves cropped and scaled region of Ein
 %     Ein = Ein./maxint;
@@ -240,11 +239,12 @@ for L=firstframe:skipframes:eval(lastframe)
 %     imwrite(Ein,[OutputPathStr,'\',filesort(L).name]);
 
 
-
+    Imin=imcrop(Imin,rect);
+    zmap=imcrop(zmap,rect);
+    % 
     %% Detect Particles and Save
-    [Xauto_min,Yauto_min,Zauto_min,Xauto_centroid,Yauto_centroid,Zauto_centroid] = detection(Imin, zmap, thlevel, disk0, disk1, derstr);
-    LocCentroid(loop).time=[Xauto_min;Yauto_min;Zauto_min;Xauto_centroid;Yauto_centroid;Zauto_centroid]';
-
+    [Xauto_min,Yauto_min,Zauto_min] = detection(Imin, zmap, thlevel, disk0, disk1, derstr);
+    LocCentroid(loop).time=[Xauto_min;Yauto_min;Zauto_min]';
     
     waitbar(loop/numframes,wb);
 end
