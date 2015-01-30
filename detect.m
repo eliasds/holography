@@ -47,7 +47,7 @@ backgroundfile = 'background.mat';
 % vortloc=[1180, 2110, 2.7E-3]; %location of vorticella in "cuvette in focus"
 % vortloc=[1535, 2105, 0]; %location of vorticella in "vort in focus"
 % thlevel = 0.0005;
-dilaterode = 4;
+dilaterode = [3,4];
 derstr = 'D1E0R8D1D1';
 % zpad=2048;
 % radix2=2048;
@@ -81,6 +81,14 @@ rect = [Xceil,Yceil,Xfloor-Xceil-1,Yfloor-Yceil-1];
 
 
 
+%% Create Dilate and Erode Parameters
+for L = 1:numel(dilaterode)
+    eval(['disk',int2str(L-1),' = morphshape(dilaterode(L));'])
+%     disk{L} = morphshape(dilaterode(L)); % more efficient code
+end
+
+
+%%
 filename = strcat(dirname,filename);
 filesort = dir([filename,'*.',ext]);
 numfiles = numel(filesort);
@@ -134,76 +142,19 @@ if exist('test')
 end
 
 
-%% Create Dilate and Erode Parameters
-if dilaterode <= 3
-    disk0 = logical(ones(dilaterode-1));
-    disk1 = logical(ones(dilaterode));
-elseif dilaterode == 4
-    dilaterode = 3;
-    disk0 = logical(ones(dilaterode));
-    dilaterode = 4;
-    disk1 = getnhood(strel('diamond', round((dilaterode+1)/2)));
-    disk1 = disk1(2:end-1,2:end-1);
-    disk1(:,dilaterode/2) = [];
-    disk1(dilaterode/2,:) = [];
-elseif dilaterode == 5
-    dilaterode = 4;
-    disk0 = getnhood(strel('diamond', round((dilaterode+1)/2)));
-    disk0 = disk0(2:end-1,2:end-1);
-    disk0(:,dilaterode/2) = [];
-    disk0(dilaterode/2,:) = [];
-    dilaterode = 5;
-    disk1 = getnhood(strel('diamond', round((dilaterode)/2)));
-    disk1 = disk1(2:end-1,2:end-1);
-elseif dilaterode == 6
-    dilaterode = 5;
-    disk0 = getnhood(strel('diamond', round((dilaterode)/2)));
-    disk0 = disk0(2:end-1,2:end-1);
-    dilaterode = 6;
-    disk1 = getnhood(strel('diamond', round((dilaterode+1)/2)));
-    disk1 = disk1(2:end-1,2:end-1);
-    disk1(:,dilaterode/2) = [];
-    disk1(dilaterode/2,:) = [];
-elseif dilaterode == 7
-    dilaterode = 6;
-    disk0 = getnhood(strel('diamond', round((dilaterode+1)/2)));
-    disk0 = disk0(2:end-1,2:end-1);
-    disk0(:,dilaterode/2) = [];
-    disk0(dilaterode/2,:) = [];
-    dilaterode = 7;
-    disk1 = getnhood(strel('diamond', round((dilaterode)/2)));
-    disk1 = disk1(2:end-1,2:end-1);
-elseif dilaterode == 8
-    dilaterode = 7;
-    disk0 = getnhood(strel('diamond', round((dilaterode)/2)));
-    disk0 = disk0(2:end-1,2:end-1);
-    dilaterode = 8;
-    disk1 = getnhood(strel('disk', 5));
-    disk1(:,dilaterode/2) = [];
-    disk1(dilaterode/2,:) = [];
-elseif dilaterode == 9
-    dilaterode = 8;
-    disk0 = getnhood(strel('disk', 5));
-    disk0(:,dilaterode/2) = [];
-    disk0(dilaterode/2,:) = [];
-    dilaterode = 9;
-    [xx,yy] = ndgrid((1:dilaterode)-((dilaterode+1)/2),(1:dilaterode)-((dilaterode+1)/2));
-    disk1 = (xx.^2 + yy.^2)<((dilaterode+1)/2)^2;
-elseif dilaterode == 35
-    dilaterode = 3;
-    disk0 = logical(ones(dilaterode));
-    dilaterode = 5;
-    disk1 = getnhood(strel('diamond', round((dilaterode)/2)));
-    disk1 = disk1(2:end-1,2:end-1);
-else
-    [xx,yy] = ndgrid((1:dilaterode)-((dilaterode+1)/2),(1:dilaterode)-((dilaterode+1)/2));
-    disk1 = (xx.^2 + yy.^2)<((dilaterode+1)/2)^2;
-    dilaterode=dilaterode-1;
-    [xx,yy] = ndgrid((1:dilaterode)-((dilaterode+1)/2),(1:dilaterode)-((dilaterode+1)/2));
-    disk0 = (xx.^2 + yy.^2)<((dilaterode+1)/2)^2;
-    % disk = 1 - disk;
-end
 
+%% Determine optimal threshold (thlevel) from first Imin
+%{
+for L=1:maxloop %only need 1/2 or 1/4 of maxloop for time saving
+    counts(L)=sum(Imin(:)<(L*deltathresh));
+end
+threshplot=diff(counts);
+plot(counts)
+plot(threshplot)
+hist(Imin(:),1/deltathresh)
+[M I]=min(threshplot(1:end/2))
+counts(I)
+%}
 
 %% Create Imin MAT files and run Particle Detection together
 %{
