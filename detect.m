@@ -144,17 +144,40 @@ end
 
 
 %% Determine optimal threshold (thlevel) from first Imin
-%{
-for L=1:maxloop %only need 1/2 or 1/4 of maxloop for time saving
-    counts(L)=sum(Imin(:)<(L*deltathresh));
-end
-threshplot=diff(counts);
-plot(counts)
-plot(threshplot)
-hist(Imin(:),1/deltathresh)
-[M I]=min(threshplot(1:end/2))
-counts(I)
-%}
+%
+% Holo_0001 = (double(imread([filesort(L).name]))./background);
+% [Imin_0001, ~] = imin(Holo_0001,lambda/refractindex,Z,ps/mag,zpad);
+% Imin_0001 = imcrop(Imin,rect);
+nbins = round(0.5*sqrt(numel(Imin)));
+[bincount,edges] = histcounts(Imin(:),nbins);
+bincount = bincount(1:round(end/2));
+edges = edges(1:round(end/2));
+[M I] = min(bincount(1:round(end/2)));
+figure(6);histogram(Imin(:),nbins)
+nbins=100;
+figure(7);plot(bincount)
+axis([0,nbins,0,5000]);
+figure(8);bincount = smooth(bincount);plot(bincount)
+[M I] = min(bincount(1:round(end/2)))
+th_new = edges(round(I/2))
+axis([0,nbins,0,5000])
+figure(9);bincount = smooth(bincount,'sgolay',2);plot(bincount)
+[M I] = min(bincount(1:round(end/2)))
+th_new = edges(round(I/2))
+axis([0,nbins,0,5000]);
+figure(10);bincount = smooth(bincount,'sgolay',4);plot(bincount)
+[M I] = min(bincount(1:round(end/2)))
+th_new = edges(round(I/2))
+axis([0,nbins,0,5000]);
+figure(11);bincount = smooth(bincount,'lowess');plot(bincount)
+[M I] = min(bincount(1:round(end/2)))
+th_new = edges(round(I/2))
+axis([0,nbins,0,5000]);
+figure(12);bincount = smooth(bincount,'loess');plot(bincount)
+[M I] = min(bincount(1:round(end/2)))
+th_new = edges(round(I/2))
+axis([0,nbins,0,5000]);
+
 
 %% Create Imin MAT files and run Particle Detection together
 %{
