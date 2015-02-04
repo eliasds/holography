@@ -11,11 +11,12 @@ function makevideo(inputFileName, varargin)
 %
 % Daniel Shuldman, UC Berkeley, eliasds@gmail.com
 
-% Set Defaults and detect GPU and initial image size
+
+%% Set Defaults and detect GPU and initial image size
 tic
-vidout = 0;
 saveoff = 0;
 framerate = 20;
+resize = 1;
 outputpathstr = 'analysis';
 outputFileName = 'video';
 vidtype = 'MPEG-4';
@@ -27,11 +28,22 @@ catch err
     gpu_num = 0;
 end
 
-
-filesort = dir([firstname,'*',ext]);
-numfiles = numel(filesort);
-Ein = imread(filesort(1, 1).name);
-[m,n]=size(Ein);
+% Import first image (or AVI file if input file is already an AVI file).
+if strcmpi(ext,'.avi')
+%     vidin=VideoReader('Basler_acA2040-25gm__21407047__20150122_144715129.avi');
+    vidin=VideoReader(inputFileName);
+    numframes = vidin.NumberOfFrames;
+    numfiles = numframes;
+    framerate = vidin.FrameRate;
+    m = vidin.Width;
+    n = vidin.Height;
+    vidin=VideoReader(inputFileName);
+else
+    filesort = dir([firstname,'*',ext]);
+    numfiles = numel(filesort);
+    Ein = imread(filesort(1, 1).name);
+    [m,n]=size(Ein);
+end
 rect = [1,1,m-1,n-1];
 
 while ~isempty(varargin)
@@ -47,9 +59,9 @@ while ~isempty(varargin)
             strrep(ext, '..', '.');
             varargin(1:2) = [];
             
-        case 'OUTPUTFILENAME'
+        case 'OUTPUT'
             outputFileName = varargin{2};
-            [outputpathstr, outputfilename, outputext] = fileparts(firstname);
+%             [outputpathstr, outputfilename, outputext] = fileparts(firstname);
             varargin(1:2) = [];
             
         case 'SAVEOFF'
@@ -80,8 +92,12 @@ while ~isempty(varargin)
             varargin(1) = [];
             
         case 'CROP'
-            rect = [varargin{2}, 1023,1023];
+            rect = [(varargin{2}), 1023,1023];
 %             rect = [1550-512,2070-1024,1023,1023];
+            varargin(1:2) = [];
+            
+        case 'RESCALE'
+            resize = varargin{2};
             varargin(1:2) = [];
             
         otherwise
@@ -98,19 +114,18 @@ if ~exist('trimframes','var')
     numframes = floor((1+lastframe-firstframe)/skipframes);
 end
 
-if ~exist(outputpathstr, 'dir')
+if ~exist(outputpathstr, 'dir') & ~isempty(outputpathstr)
   mkdir(outputpathstr);
 end
 
-if gpu_num > 0;
-    vidout=gpuArray(vidout);
-end
+% GPU can't be used with stuctures. Otherwise I would use this code:
+% if gpu_num > 0;
+%     vidout=gpuArray(vidout);
+% end
 
 
 % Preallocate video array
-clear vidout;
-vidout(numframes) = struct('cdata',[],'colormap',[]);
-%writerObj = VideoWriter(strcat('analysis\',filename,'_',num2str(uint8(rand*100))),vidtype);
+vidout(1:numframes) = struct('cdata',zeros(rect(4),rect(3),3,'uint8'),'colormap',[]);
 if saveoff == 0;
     writerObj = VideoWriter([outputpathstr,'\',outputFileName,'_',...
         num2str(uint8(rand*100))],vidtype);
@@ -123,20 +138,25 @@ wb = waitbar(0,'Creating Video');
 for loop=1:numframes
     L=loop*skipframes;
 %     load(filesort(L, 1).name,'Imin'); Ein=Imin;
-    Ein = double(imread(filesort(L, 1).name));
-%     Ein = imcrop(Ein,rect);
+    if exist('vidin','var')
+        Ein = double(readFrame(vidin));
+    else
+        Ein = double(imread(filesort(L, 1).name));
+    end
+    Ein = imcrop(Ein,rect);
+    Ein = imresize(Ein,resize);
 %     Ein = fp_imload(filesort(L, 1).name,'background.mat');
 %     Ein = flipud(fp_imload(filesort(L, 1).name));
 %     Ein = rot90(fp_imload(filesort(L, 1).name)); %also switch (m,n) in vidout
-%     maxint = 2*mean(Ein(:));
-    maxint = max(Ein(:));
+    maxint = 2*mean(Ein(:));
+%     maxint = max(Ein(:));
     Ein(Ein>maxint) = maxint;
     Ein = 255.*Ein./maxint;
     
 %     Eout = propagate(Ein,lambda,z,eps,zpad);
     Eout = Ein;
-    vidout(loop).cdata = uint8(zeros(m,n,3));
-    vidout(loop).cdata(:,:,1) = uint8(abs(Eout));
+%     vidout(loop).cdata = uint8(zeros(m,n,3));
+    vidout(loop).cdata = uint8(abs(Eout));
 %     vidout(loop).cdata(:,:,1) = uint8(abs(Eout).*128);
 %     vidout(loop).cdata(:,:,1) = uint8(abs(Eout)./256);
     vidout(loop).cdata(:,:,2) = vidout(loop).cdata(:,:,1);
