@@ -9,6 +9,7 @@ saveon = 0;
 count = 0;
 firstframe = 1;
 step = 1;
+rgbcode = 'rggb';
 try
     gpu_num = gpuDeviceCount; %Determines if there is a CUDA enabled GPU
 catch err
@@ -53,6 +54,11 @@ while ~isempty(varargin)
             firstframe = 2;
             step = 2;
             
+        case 'DEMOSAIC'
+            mosaic = true;
+            rgbcode = varargin{2};
+            varargin(1:2) = [];
+            
         otherwise
             error(['Unexpected option: ' varargin{1}])
     end
@@ -67,7 +73,11 @@ end
 
 wb = waitbar(1/numfiles,['importing files']);
 for L=firstframe:step:numfiles
-    background=background+double(imread(filesort(L).name));
+    if mosaic == true;
+        background = background+double(rgb2gray(demosaic(imread(filesort(L).name),rgbcode)));
+    else
+        background=background+double(imread(filesort(L).name));
+    end
     count = count + 1;
     waitbar(L/numfiles,wb);
 end
