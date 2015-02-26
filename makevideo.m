@@ -17,6 +17,7 @@ tic
 saveoff = 0;
 framerate = 20;
 resize = 1;
+background = 1;
 outputpathstr = 'analysis';
 outputFileName = 'video';
 vidtype = 'MPEG-4';
@@ -100,6 +101,13 @@ while ~isempty(varargin)
             resize = varargin{2};
             varargin(1:2) = [];
             
+        case 'BACKGROUND'
+            background = varargin{2};
+            varnam=who('-file',background);
+            background=load(background,varnam{1});
+            background=background.(varnam{1});
+            varargin(1:2) = [];
+            
         otherwise
             error(['Unexpected option: ' varargin{1}])
     end
@@ -141,7 +149,7 @@ for loop=1:numframes
     if exist('vidin','var')
         Ein = double(readFrame(vidin));
     else
-        Ein = double(imread(filesort(L, 1).name));
+        Ein = double(imread(filesort(L, 1).name))./background;
     end
     Ein = imcrop(Ein,rect);
     Ein = imresize(Ein,resize);
