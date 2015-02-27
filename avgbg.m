@@ -9,6 +9,7 @@ saveon = 0;
 count = 0;
 firstframe = 1;
 step = 1;
+mosaic = false;
 rgbcode = 'rggb';
 try
     gpu_num = gpuDeviceCount; %Determines if there is a CUDA enabled GPU
