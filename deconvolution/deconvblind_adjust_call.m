@@ -1,6 +1,6 @@
 %% Blind Deconvolution Code
 %Loading in Data: Real Data (20140402-Vort-20um)
-%
+%{
 ps = 5.5E-6;
 mag = 4; %Magnification
 eps = ps / mag; %Effective Pixel Size in meters
@@ -23,6 +23,8 @@ filename = 'Mie512px_5part_Init';
 % background = load('D:/shuldman/github/holography/deconvolution/20140402-Vort-20um/background.mat');
 % hologram = im2double((hologram(1:2048, 1:2048)))./ im2double(background.background(1:2048, 1:2048));
 % load('D:\shuldman\simulations\20150223-KnifeEdgeLeftAperture_20umDiamPartLowDens_Mag4_Exp50_FPS01_RealAndVirtual.mat')
+% Call fft editing function
+% Holo=fftedit(Holo);
 load('D:\shuldman\Dropbox\simulation\3Ddeconvolution\HoloPSFtrials\CodedPSF\Mie512px_5part_Init.mat','Holo');
 PSF3D_Init = load('D:\shuldman\simulations\coded3DPSF 512.mat','PSF3D'); PSF3D_Init = PSF3D_Init.PSF3D;
 % PSF3D_Init = abs(PSF3D);
@@ -43,30 +45,79 @@ Holo3D_Init = (propagate(Holo,lambda/refractindex,Zout,ps/mag,'zpad',zpad,'mask'
 % [blind_obj, blind_psf] = deconvblind(abs(hologram_field_small_bgsub),psf_init);
 
 %}
-
+%%
+% maskFn=@mask;
+filename = 'Sim_Mie512px_5part_RealParticleField';
 tic
 load gong.mat;
-[J,PSF3D] = deconvblind_adjust({Holo3D_Init},{PSF3D_Init},100);
-save([filename,'_100Iterations.mat'],'J','PSF3D','-v7.3');
+% [J,PSF3D] = deconvblind({Holo3D_Init},{PSF3D_Init},10);
+% save([filename,'_10Iterations.mat'],'J','PSF3D','-v7.3');
+% toc
+% try soundsc(y); catch ME; end;
+% [J,PSF3D] = deconvblind(J,PSF3D,10);
+% save([filename,'_20Iterations.mat'],'J','PSF3D','-v7.3');
+% toc
+% try soundsc(y); catch ME; end;
+% [J,PSF3D] = deconvblind(J,PSF3D,20);
+% save([filename,'_40Iterations.mat'],'J','PSF3D','-v7.3');
+% toc
+try soundsc(y); catch ME; end;
+[J,PSF3D] = deconvblind(J,PSF3D,10);
+save([filename,'_50Iterations.mat'],'J','PSF3D','-v7.3');
 toc
-soundsc(y);
-[J,PSF3D] = deconvblind_adjust(J,PSF3D,100);
-save([filename,'_200Iterations.mat'],'J','PSF3D','-v7.3');
+try soundsc(y); catch ME; end;
+%
+[J,PSF3D] = deconvblind(J,PSF3D,10);
+save([filename,'_60Iterations.mat'],'J','PSF3D','-v7.3');
 toc
-soundsc(y);
-[J,PSF3D] = deconvblind_adjust(J,PSF3D,100);
+try soundsc(y); catch ME; end;
+%
+[J,PSF3D] = deconvblind(J,PSF3D,10);
+save([filename,'_70Iterations.mat'],'J','PSF3D','-v7.3');
+toc
+try soundsc(y); catch ME; end;
+%
+[J,PSF3D] = deconvblind(J,PSF3D,10);
+save([filename,'_80Iterations.mat'],'J','PSF3D','-v7.3');
+toc
+try soundsc(y); catch ME; end;
+%{
+[J,PSF3D] = deconvblind(J,PSF3D,100);
 save([filename,'_300Iterations.mat'],'J','PSF3D','-v7.3');
 toc
-soundsc(y);
-[J,PSF3D] = deconvblind_adjust(J,PSF3D,100);
-save([filename,'_400Iterations.mat'],'J','PSF3D','-v7.3');
+try soundsc(y); catch ME; end;
+%
+[J,PSF3D] = deconvblind(J,PSF3D,100,maskFn);
+save([filename,'_900Iterations.mat'],'J','PSF3D','-v7.3');
 toc
-soundsc(y);
-[J,PSF3D] = deconvblind_adjust(J,PSF3D,100);
-save([filename,'_500Iterations.mat'],'J','PSF3D','-v7.3');
+try soundsc(y); catch ME; end;
+[J,PSF3D] = deconvblind(J,PSF3D,100,maskFn);
+save([filename,'_1000Iterations.mat'],'J','PSF3D','-v7.3');
 toc
-soundsc(y);
-[J,PSF3D] = deconvblind_adjust(J,PSF3D,100);
-save([filename,'_600Iterations.mat'],'J','PSF3D','-v7.3');
-toc
-soundsc(y);
+% try soundsc(y); catch ME; end;
+
+
+
+%% fsfds
+
+%function HoloOut=fftedit(Ein)
+[m,n]=size(Ein);  M=m;  N=n;
+zpad=1024;
+M=zpad;
+N=zpad;
+aveborder=mean(cat(2,Ein(1,:),Ein(m,:),Ein(:,1)',Ein(:,n)'));
+Ein_pad=ones(M,N)*aveborder; %pad by average border value to avoid sharp jumps
+Ein_pad(1+(M-m)/2:(M+m)/2,1+(N-n)/2:(N+n)/2)=Ein;
+HoloFFT = fftshift(fft2(Ein_pad));
+mfft = HoloFFT(63,334);
+HoloFFT2=HoloFFT;
+HoloFFT2(1:130,400:650)=mfft;
+HoloFFT2(924:1024,350:650)=mfft;
+HoloFFT2(296:305,498:503)=mfft;
+HoloFFT2(403:408,502:510)=mfft;
+HoloFFT2(617:624,516:522)=mfft;
+HoloFFT2(722:729,523:527)=mfft;
+HoloFFT2=HoloFFT2.*mask;
+Eout_pad=ifft2(ifftshift(HoloFFT2));
+HoloOut=Eout_pad(1+(M-m)/2:(M+m)/2,1+(N-n)/2:(N+n)/2);
+%}
