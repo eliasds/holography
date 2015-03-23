@@ -55,11 +55,11 @@ for L=1:2:numel(varargin)
 end
 
 if ~exist('maxint','var')
-    maxint=2*mean(abs(Ein(:)));
+    maxint=2*mean(real(Ein(:)));
 end
 Eout = propagate(Ein,lambda,Z(1),ps,varargin{:});
 figure(99);
-imagesc(imcrop(abs(Eout).^2,rect),[0 maxint.^2])
+imagesc(imcrop(real(Eout).^2,rect),[0 maxint.^2])
 % imagesc(abs(Eout).^2,[0 maxint.^2])
 title(['Z = ',num2str(1000*Z(1)),'mm'],'FontSize',16);
 colormap gray; colorbar; axis image;
@@ -69,7 +69,7 @@ pause
 for L=2:numel(Z)
     Eout = propagate(Ein,lambda,Z(L),ps,varargin{:});
     figure(99);
-    imagesc(imcrop(abs(Eout).^2,rect),[0 maxint.^2])
+    imagesc(imcrop(real(Eout).^2,rect),[0 maxint.^2])
     title(['Z = ',num2str(1000*Z(L)),'mm'],'FontSize',16);
     colormap gray; colorbar; axis image;
     drawnow
