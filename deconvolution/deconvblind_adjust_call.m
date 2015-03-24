@@ -51,20 +51,21 @@ filename1 = 'Sim_Mie512px_5part_RealParticleFieldNorm';
 filename2 = 'Sim_Mie512px_5part_PosParticleFieldNorm';
 tic
 load gong.mat;
-[Jreal,PSF3Dreal] = deconvblind({Holo3D_Init},{PSF3D_Init},10);
-save([filename1,'_10Iterations.mat'],'Jreal','PSF3Dreal','-v7.3');
-[Jpos,PSF3Dpos] = deconvblind({Holo3D_InitPOS},{PSF3D_InitPOS},10);
-save([filename2,'_10Iterations.mat'],'Jpos','PSF3Dpos','-v7.3');
-toc
-try soundsc(y); catch ME; end;
-
-for L = 20:10:30;
-    [Jreal,PSF3Dreal] = deconvblind(Jreal,PSF3Dreal,10);
+% [Jreal,PSF3Dreal] = deconvblind({Holo3D_Init},{PSF3D_Init},10);
+% save([filename1,'_10Iterations.mat'],'Jreal','PSF3Dreal','-v7.3');
+% [Jpos,PSF3Dpos] = deconvblind({Holo3D_InitPOS},{PSF3D_InitPOS},10);
+% save([filename2,'_10Iterations.mat'],'Jpos','PSF3Dpos','-v7.3');
+% toc
+% try soundsc(y); catch ME; end;
+M=30;
+for L = [40 50 100 200];
+    [Jreal,PSF3Dreal] = deconvblind(Jreal,PSF3Dreal,L-M);
     save([filename1,'_',num2str(L),'Iterations.mat'],'Jreal','PSF3Dreal','-v7.3');
-    [Jpos,PSF3Dpos] = deconvblind(Jpos,PSF3Dpos,10);
+    [Jpos,PSF3Dpos] = deconvblind(Jpos,PSF3Dpos,L-M);
     save([filename2,'_',num2str(L),'Iterations.mat'],'Jpos','PSF3Dpos','-v7.3');
     toc
     try soundsc(y); catch ME; end;
+    M=L;
 end
 
 % [Jreal,PSF3Dreal] = deconvblind(Jreal,PSF3Dreal,20);
