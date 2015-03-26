@@ -1,15 +1,17 @@
 %Test for convergence
 tic
-numofiterations = 100;
+numofiterations = 50;
 iternum = (2:numofiterations);
 diffsumHOLO(numofiterations-1) = 0;
 diffsumPSF(numofiterations-1) = 0;
-[J,PSF3D] = deconvblind({Holo3D_Init},{PSF3D_Init},2);
-diffsumHOLO(1) = sum(J{3}(:)-J{2}(:));
+[HOLO3D,PSF3D] = deconvblind({HOLO3Di},{PSF3Di},2);
+toc
+diffsumHOLO(1) = sum(HOLO3D{3}(:)-HOLO3D{2}(:));
 diffsumPSF(1) = sum(PSF3D{3}(:)-PSF3D{2}(:));
-for L = 2:numofiterations-1
-    [J,PSF3D] = deconvblind(J,PSF3D,1);
-    diffsumHOLO(L) = sum(J{3}(:)-J{2}(:));
+%%
+for L = 2:9%numofiterations-1
+    [HOLO3D,PSF3D] = deconvblind(HOLO3D,PSF3D,1);
+    diffsumHOLO(L) = sum(HOLO3D{3}(:)-HOLO3D{2}(:));
     diffsumPSF(L) = sum(PSF3D{3}(:)-PSF3D{2}(:));
 end
 
