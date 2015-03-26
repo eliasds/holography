@@ -52,29 +52,22 @@ filename1 = 'KnifeEdgeExpData_SimPSF_RealParticleFieldNormInvert';
 filename2 = 'KnifeEdgeExpData_SimPSF_RealParticleFieldNormInvertPos';
 tic
 load gong.mat;
-<<<<<<< HEAD
-% [J,PSF3D] = deconvblind({Holo3D_Init},{PSF3D_Init},10);
-% save([filename0,'_10Iterations.mat'],'J','PSF3D','-v7.3');
-=======
->>>>>>> db2e602662af329c8cbfa12c905ff014d154d69a
-% [Jreal,PSF3Dreal] = deconvblind({Holo3D_Init},{PSF3D_Init},10);
-% save([filename1,'_10Iterations.mat'],'Jreal','PSF3Dreal','-v7.3');
-% [Jpos,PSF3Dpos] = deconvblind({Holo3D_InitPOS},{PSF3D_InitPOS},10);
-% save([filename2,'_10Iterations.mat'],'Jpos','PSF3Dpos','-v7.3');
-% toc
-% try soundsc(y); catch ME; end;
+
+[J,PSF3D] = deconvblind({Holo3D_Init},{PSF3D_Init},10);
+save([filename0,'_10Iterations.mat'],'J','PSF3D','-v7.3');
+[Jreal,PSF3Dreal] = deconvblind({Holo3D_Init},{PSF3D_Init},10);
+save([filename1,'_10Iterations.mat'],'Jreal','PSF3Dreal','-v7.3');
+[Jpos,PSF3Dpos] = deconvblind({Holo3D_InitPOS},{PSF3D_InitPOS},10);
+save([filename2,'_10Iterations.mat'],'Jpos','PSF3Dpos','-v7.3');
+toc
+try soundsc(y); catch ME; end;
+
 M=30;
-<<<<<<< HEAD
 for L = [50 100 200];
-%     [J,PSF3D] = deconvblind(J,PSF3D,L-M);
-%     save([filename0,'_',num2str(L),'Iterations.mat'],'J','PSF3D','-v7.3');
-%     [Jreal,PSF3Dreal] = deconvblind(Jreal,PSF3Dreal,L-M);
-%     save([filename1,'_',num2str(L),'Iterations.mat'],'Jreal','PSF3Dreal','-v7.3');
-=======
-for L = [40 50 100 200];
+    [J,PSF3D] = deconvblind(J,PSF3D,L-M);
+    save([filename0,'_',num2str(L),'Iterations.mat'],'J','PSF3D','-v7.3');
     [Jreal,PSF3Dreal] = deconvblind(Jreal,PSF3Dreal,L-M);
     save([filename1,'_',num2str(L),'Iterations.mat'],'Jreal','PSF3Dreal','-v7.3');
->>>>>>> db2e602662af329c8cbfa12c905ff014d154d69a
     [Jpos,PSF3Dpos] = deconvblind(Jpos,PSF3Dpos,L-M);
     save([filename2,'_',num2str(L),'Iterations.mat'],'Jpos','PSF3Dpos','-v7.3');
     toc
