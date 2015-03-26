@@ -45,65 +45,39 @@ Holo3D_Init = (propagate(Holo,lambda/refractindex,Zout,ps/mag,'zpad',zpad,'mask'
 % [blind_obj, blind_psf] = deconvblind(abs(hologram_field_small_bgsub),psf_init);
 
 %}
-%%
+%
 % maskFn=@mask;
-filename1 = 'Sim_Mie512px_5part_RealParticleFieldNorm';
-filename2 = 'Sim_Mie512px_5part_PosParticleFieldNorm';
+filename0 = 'Sim_Mie512px_5part_RealParticleField_Inverse';
+filename1 = 'KnifeEdgeExpData_SimPSF_RealParticleFieldNormInvert';
+filename2 = 'KnifeEdgeExpData_SimPSF_RealParticleFieldNormInvertPos';
 tic
 load gong.mat;
-[Jreal,PSF3Dreal] = deconvblind({Holo3D_Init},{PSF3D_Init},10);
-save([filename1,'_10Iterations.mat'],'Jreal','PSF3Dreal','-v7.3');
-[Jpos,PSF3Dpos] = deconvblind({Holo3D_InitPOS},{PSF3D_InitPOS},10);
-save([filename2,'_10Iterations.mat'],'Jpos','PSF3Dpos','-v7.3');
-toc
-try soundsc(y); catch ME; end;
-
-for L = 20:10:30;
-    [Jreal,PSF3Dreal] = deconvblind(Jreal,PSF3Dreal,10);
-    save([filename1,'_',num2str(L),'Iterations.mat'],'Jreal','PSF3Dreal','-v7.3');
-    [Jpos,PSF3Dpos] = deconvblind(Jpos,PSF3Dpos,10);
+% [J,PSF3D] = deconvblind({Holo3D_Init},{PSF3D_Init},10);
+% save([filename0,'_10Iterations.mat'],'J','PSF3D','-v7.3');
+% [Jreal,PSF3Dreal] = deconvblind({Holo3D_Init},{PSF3D_Init},10);
+% save([filename1,'_10Iterations.mat'],'Jreal','PSF3Dreal','-v7.3');
+% [Jpos,PSF3Dpos] = deconvblind({Holo3D_InitPOS},{PSF3D_InitPOS},10);
+% save([filename2,'_10Iterations.mat'],'Jpos','PSF3Dpos','-v7.3');
+% toc
+% try soundsc(y); catch ME; end;
+M=30;
+for L = [50 100 200];
+%     [J,PSF3D] = deconvblind(J,PSF3D,L-M);
+%     save([filename0,'_',num2str(L),'Iterations.mat'],'J','PSF3D','-v7.3');
+%     [Jreal,PSF3Dreal] = deconvblind(Jreal,PSF3Dreal,L-M);
+%     save([filename1,'_',num2str(L),'Iterations.mat'],'Jreal','PSF3Dreal','-v7.3');
+    [Jpos,PSF3Dpos] = deconvblind(Jpos,PSF3Dpos,L-M);
     save([filename2,'_',num2str(L),'Iterations.mat'],'Jpos','PSF3Dpos','-v7.3');
     toc
     try soundsc(y); catch ME; end;
+    M=L;
 end
 
-% [Jreal,PSF3Dreal] = deconvblind(Jreal,PSF3Dreal,20);
-% save([filename1,'_40Iterations.mat'],'J','PSF3D','-v7.3');
-% toc
-% try soundsc(y); catch ME; end;
-% [Jreal,PSF3Dreal] = deconvblind(Jreal,PSF3Dreal,10);
-% save([filename1,'_50Iterations.mat'],'J','PSF3D','-v7.3');
-% toc
-% try soundsc(y); catch ME; end;
-% %
-% [Jreal,PSF3Dreal] = deconvblind(Jreal,PSF3Dreal,10);
-% save([filename1,'_60Iterations.mat'],'J','PSF3D','-v7.3');
-% toc
-% try soundsc(y); catch ME; end;
-% %
-% [Jreal,PSF3Dreal] = deconvblind(Jreal,PSF3Dreal,10);
-% save([filename1,'_70Iterations.mat'],'J','PSF3D','-v7.3');
-% toc
-% try soundsc(y); catch ME; end;
-% %
-% [Jreal,PSF3Dreal] = deconvblind(Jreal,PSF3Dreal,10);
-% save([filename1,'_80Iterations.mat'],'J','PSF3D','-v7.3');
-% toc
-% try soundsc(y); catch ME; end;
 %{
-[J,PSF3D] = deconvblind(J,PSF3D,100);
-save([filename,'_300Iterations.mat'],'J','PSF3D','-v7.3');
-toc
-try soundsc(y); catch ME; end;
-%
 [J,PSF3D] = deconvblind(J,PSF3D,100,maskFn);
 save([filename,'_900Iterations.mat'],'J','PSF3D','-v7.3');
 toc
 try soundsc(y); catch ME; end;
-[J,PSF3D] = deconvblind(J,PSF3D,100,maskFn);
-save([filename,'_1000Iterations.mat'],'J','PSF3D','-v7.3');
-toc
-% try soundsc(y); catch ME; end;
 
 
 
