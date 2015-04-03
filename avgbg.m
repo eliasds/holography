@@ -1,8 +1,10 @@
 %% Create Background Image From Average of Series
-% 
+% Create an averaged (background) image from many images.
+% Defaults:
+% Options: Filename, CPU, Ext, Output, Odd, Even, Demosaic, Keep
 % Version 2.0
 
-function background = avgbg(varargin)
+function [background, mov] = avgbg(varargin)
 
 background = 0;
 saveon = 0;
@@ -11,6 +13,7 @@ firstframe = 1;
 step = 1;
 mosaic = false;
 rgbcode = 'rggb';
+keep = false;
 try
     gpu_num = gpuDeviceCount; %Determines if there is a CUDA enabled GPU
 catch err
@@ -41,8 +44,9 @@ while ~isempty(varargin)
             varargin(1:2) = [];
             
         case 'OUTPUT'
-            saveon = 1;
+            saveon = true;
             outputFileName = varargin{2};
+            outputFileName = strrep(outputFileName, '.mat', '');
             varargin(1:2) = [];
             
         case 'ODD'
@@ -72,12 +76,23 @@ if gpu_num > 0;
     background=gpuArray(background);
 end
 
+if nargout > 1
+    newfile = imread(filesort(firstframe).name);
+    mov = zeros([size(newfile),numfiles]);
+end
+    
 wb = waitbar(1/numfiles,['importing files']);
 for L=firstframe:step:numfiles
+    newfile = imread(filesort(L).name);
     if mosaic == true;
-        background = background+double(rgb2gray(demosaic(imread(filesort(L).name),rgbcode)));
+        newfile = double(rgb2gray(demosaic(newfile,rgbcode)));
+        background = background+newfile;
     else
-        background=background+double(imread(filesort(L).name));
+        newfile = double(newfile);
+        background = background+newfile;
+    end
+    if nargout > 1
+        mov(:,:,L) = newfile;
     end
     count = count + 1;
     waitbar(L/numfiles,wb);
@@ -89,7 +104,7 @@ if gpu_num > 0;
     background=gather(background);
 end
 
-if saveon == 1;
+if saveon == true;
     save([outputFileName, '.mat'],'background');
     if max(background) > 256
         imwrite(uint16(background), [outputFileName,ext], 'tif');
