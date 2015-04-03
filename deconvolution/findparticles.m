@@ -1,12 +1,12 @@
 %% Find Deconvolved Particle Locations
 J2pos = Jpos{2};
-J2real = Jreal{2};
+% J2real = Jreal{2};
 
 
-thresh = 1.2;
+thresh = 11;
 
 matPOS = J2pos > thresh; [ xyzlocationsPOS ] = findxyz( matPOS ); figure(98); plot3(xyzlocationsPOS(:,1),xyzlocationsPOS(:,2),xyzlocationsPOS(:,3),'b.'); box; grid minor; grid on; axis([0,512,0,512,0,251]); title('POS');
-matREAL = J2real > thresh; [ xyzlocationsREAL ] = findxyz( matREAL ); figure(99); plot3(xyzlocationsREAL(:,1),xyzlocationsREAL(:,2),xyzlocationsREAL(:,3),'b.'); box; grid minor; grid on; axis([0,512,0,512,0,251]); title('REAL');
+% matREAL = J2real > thresh; [ xyzlocationsREAL ] = findxyz( matREAL ); figure(99); plot3(xyzlocationsREAL(:,1),xyzlocationsREAL(:,2),xyzlocationsREAL(:,3),'b.'); box; grid minor; grid on; axis([0,512,0,512,0,251]); title('REAL');
 
 % if exist('Holo','var')
 for L = 1:length(xyzlocationsPOS)
