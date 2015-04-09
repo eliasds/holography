@@ -49,7 +49,6 @@ for L=1:2:numel(varargin)
             
         case 'IMCROP'
             rect = varargin{L+1};
-            rect(3:4) = rect(3:4)-1;
             varargin(L:L+1) = [];
             
     end
