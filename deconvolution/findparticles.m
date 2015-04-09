@@ -1,7 +1,7 @@
 %% Find Deconvolved Particle Locations
 J2 = J{2};
 J2pos = Jpos{2};
-J2real = Jreal{2};
+% J2real = Jreal{2};
 
 figure(97);
 hist(J2(:),1000);title('Norm');axis([0,max(J2(:)),0,100])
@@ -10,8 +10,6 @@ hist(J2pos(:),1000);title('POS');axis([0,1.6,0,100])
 figure(99);
 hist(J2real(:),1000);title('REAL');axis([0,1.6,0,100])
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 <<<<<<< HEAD
 thresh = 11;
 
@@ -32,18 +30,6 @@ matPOS = J2pos > threshPOS; [ xyzlocationsPOS ] = findxyz( matPOS ); figure(98);
 threshREAL = 0.36;
 matREAL = J2real > threshREAL; [ xyzlocationsREAL ] = findxyz( matREAL ); figure(99); plot3(xyzlocationsREAL(:,1),xyzlocationsREAL(:,2),xyzlocationsREAL(:,3),'b.'); box; grid minor; grid on; axis([0,512,0,512,0,251]); title('REAL');
 >>>>>>> origin/master
-=======
-thresh = 1.2;
-
-matPOS = J2pos > thresh; [ xyzlocationsPOS ] = findxyz( matPOS ); figure(98); plot3(xyzlocationsPOS(:,1),xyzlocationsPOS(:,2),xyzlocationsPOS(:,3),'b.'); box; grid minor; grid on; axis([0,512,0,512,0,251]); title('POS');
-matREAL = J2real > thresh; [ xyzlocationsREAL ] = findxyz( matREAL ); figure(99); plot3(xyzlocationsREAL(:,1),xyzlocationsREAL(:,2),xyzlocationsREAL(:,3),'b.'); box; grid minor; grid on; axis([0,512,0,512,0,251]); title('REAL');
->>>>>>> parent of 1e8d606... minor changes findparticles and imageprop
-=======
-thresh = 1.2;
-
-matPOS = J2pos > thresh; [ xyzlocationsPOS ] = findxyz( matPOS ); figure(98); plot3(xyzlocationsPOS(:,1),xyzlocationsPOS(:,2),xyzlocationsPOS(:,3),'b.'); box; grid minor; grid on; axis([0,512,0,512,0,251]); title('POS');
-matREAL = J2real > thresh; [ xyzlocationsREAL ] = findxyz( matREAL ); figure(99); plot3(xyzlocationsREAL(:,1),xyzlocationsREAL(:,2),xyzlocationsREAL(:,3),'b.'); box; grid minor; grid on; axis([0,512,0,512,0,251]); title('REAL');
->>>>>>> parent of 1e8d606... minor changes findparticles and imageprop
 
 for L = 1:length(xyzlocationsPOS)
 xyzlocationsPOS(L,4) = J2pos(xyzlocationsPOS(L,2),xyzlocationsPOS(L,1),xyzlocationsPOS(L,3));
