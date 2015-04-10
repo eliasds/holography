@@ -52,6 +52,10 @@ for L=1:2:numel(varargin)
             rect(3:4) = rect(3:4)-1;
             varargin(L:L+1) = [];
             
+        case 'MAXINT'
+            maxint = varargin{L+1};
+            varargin(L:L+1) = [];
+            
     end
 end
 

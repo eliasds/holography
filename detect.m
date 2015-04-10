@@ -33,7 +33,7 @@ clear all
 tic
 
 dirname = '';
-filename    = 'Basler_acA2040-25gm__21407047__20150121_162008320_';
+filename    = 'Basler_acA2040-25gm__21407047__20150325_154720390_';
 ext = 'tiff';
 backgroundfile = 'background.mat';
 % mag = 4; %Magnification
@@ -54,10 +54,10 @@ derstr = 'D1E0R8D1D1';
 firstframe = 1;
 lastframe = 'numfiles';
 % lastframe = '2';
-skipframes = 1; % skipframes = 1 is default
+skipframes = 2; % skipframes = 1 is default
 % IminPathStr = 'matfiles-5imgBG';
 IminPathStr = 'matfiles';
-OutputPathStr = 'analysis-20150128';
+OutputPathStr = 'analysis-20150410';
 % maxint=2; %overide default max intensity: 2*mean(Imin(:))
 % test=1;
 load('constants.mat')
@@ -68,9 +68,9 @@ Z=linspace(z1,z2,steps);
 % rect = [1550-512,2070-1024,1023,1023]; %for "vort in focus" data
 % rect = [2560-radix2,2160-radix2,radix2-1,radix2-1]; %bottom right
 % rect = [vortloc(1)-radix2/2,vortloc(2)-radix2,radix2-1,radix2-1]; %Cropping
-rect = [1,1,2047,2047]; %temp Cropping
-rect = [650-512,1865-1024,1023,1023];
-rect = [Xceil,Yceil,Xfloor-Xceil-1,Yfloor-Yceil-1];
+% rect = [1,1,2047,2047]; %temp Cropping
+% rect = [650-512,1865-1024,1023,1023];
+% rect = [Xceil,Yceil,Xfloor-Xceil-1,Yfloor-Yceil-1];
 
 % ps = ps / mag; % Effective Pixel Size in meters
 % lambda = lambda / refractindex; % Effective laser wavelength in meters
@@ -129,12 +129,12 @@ end
 
 %
 
-% Ein = gather((double(imread([filesort(1).name]))./background));
+Ein = gather((double(imread([filesort(1).name]))./background));
 % Ein = gather((double(imread([filesort(1).name]))));
 % Ein = gather(double(background));
-Ein = gather((double(imread([filesort(1).name]))./double(imread([filesort(skipframes+1).name]))));
+% Ein = gather((double(imread([filesort(1).name]))./double(imread([filesort(skipframes+1).name]))));
 if ~exist('maxint')
-    maxint=2*mean(Ein(:));
+    maxint=2*mean(real(Ein(:)));
 end
 
 if exist('test')
@@ -144,7 +144,7 @@ end
 
 
 %% Determine optimal threshold (thlevel) from first Imin
-%
+%{
 % Holo_0001 = (double(imread([filesort(L).name]))./background);
 % [Imin_0001, ~] = imin(Holo_0001,lambda/refractindex,Z,ps/mag,zpad);
 Imin0001 = imcrop(Imin,rect);
@@ -165,10 +165,10 @@ figure(10);bincount6 = smooth(bincount,'lowess');plot(edges,bincount6)
 I2 = round(I/10);
 th_new = edges(I2)
 axis([0,max(edges),0,5000]);
-
+%}
 
 %% Create Imin MAT files and run Particle Detection together
-%{
+%
 
 save([IminPathStr,'/','constants.mat'], 'lambda', 'mag', 'maxint',...
     'ps', 'refractindex', 'steps', 'stepsize', 'thlevel', 'vortloc',...
@@ -191,7 +191,7 @@ for L=firstframe:skipframes:eval(lastframe)
     %Ein(isnan(Ein)) = mean(background(:));
     Ein(Ein>maxint)=maxint;
 
-    [Imin, zmap] = imin(Ein,lambda/refractindex,Z,ps/mag,zpad);
+    [Imin, zmap] = imin(Ein,lambda/refractindex,Z,ps/mag,'zpad',zpad,'mask',mask);
     save([IminPathStr,'\',filesort(L).firstname,'.mat'],'Imin','zmap','-v7.3');
         
     
@@ -300,7 +300,7 @@ toc
 
 
 %% Detect Particles and Save
-%
+%{
 loop = 0;
 wb = waitbar(0/numframes,'Locating Particle Locations from Data');
 %for L=1:numframes
