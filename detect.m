@@ -36,6 +36,8 @@ dirname = '';
 filename    = 'Basler_acA2040-25gm__21407047__20150325_154720390_';
 ext = 'tiff';
 backgroundfile = 'background.mat';
+createIminfilesflag = false;
+runparticledetectionflag = true;
 % mag = 4; %Magnification
 % ps = 5.5E-6; % Pixel Size in meters
 % refractindex = 1.33;
@@ -51,7 +53,7 @@ dilaterode = [3,4];
 derstr = 'D1E0R8D1D1';
 % zpad=2048;
 % radix2=2048;
-firstframe = 1;
+firstframe = 269;
 lastframe = 'numfiles';
 % lastframe = '2';
 skipframes = 2; % skipframes = 1 is default
@@ -133,11 +135,11 @@ Ein = gather((double(imread([filesort(1).name]))./background));
 % Ein = gather((double(imread([filesort(1).name]))));
 % Ein = gather(double(background));
 % Ein = gather((double(imread([filesort(1).name]))./double(imread([filesort(skipframes+1).name]))));
-if ~exist('maxint')
+if ~exist('maxint','var')
     maxint=2*mean(real(Ein(:)));
 end
 
-if exist('test')
+if exist('test','var')
     numfiles=test;
 end
 
@@ -178,36 +180,44 @@ loop = 0;
 wb = waitbar(0/numframes,'Analysing Data for Imin and Detecting Particles');
 for L=firstframe:skipframes:eval(lastframe)
     loop = loop + 1;
-    % import data from tif files.
-    % Ein = (double(imread([filesort(L).name])));o
-%     Holo = background;
-%     background = double(imread([filesort(L+skipframes).name]));
-%     Ein = Holo./background;
-    Ein = (double(imread([filesort(L).name]))./background);
-%     Ein = imcrop(Ein,rect);
-    % Ein=Ein(vortloc(2)-radix2+1:vortloc(2),vortloc(1)-radix2/2:vortloc(1)-1+radix2/2);
-    %Ein=Ein(1882-768:1882+255,1353-511:1353+512);
-    %Ein = (double(background));
-    %Ein(isnan(Ein)) = mean(background(:));
-    Ein(Ein>maxint)=maxint;
+    if createIminfilesflag == true;
+        % import data from tif files.
+        % Ein = (double(imread([filesort(L).name])));o
+    %     Holo = background;
+    %     background = double(imread([filesort(L+skipframes).name]));
+    %     Ein = Holo./background;
+        Ein = (double(imread([filesort(L).name]))./background);
+    %     Ein = imcrop(Ein,rect);
+        % Ein=Ein(vortloc(2)-radix2+1:vortloc(2),vortloc(1)-radix2/2:vortloc(1)-1+radix2/2);
+        %Ein=Ein(1882-768:1882+255,1353-511:1353+512);
+        %Ein = (double(background));
+        %Ein(isnan(Ein)) = mean(background(:));
+        Ein(Ein>maxint)=maxint;
 
-    [Imin, zmap] = imin(Ein,lambda/refractindex,Z,ps/mag,'zpad',zpad,'mask',mask);
-    save([IminPathStr,'\',filesort(L).firstname,'.mat'],'Imin','zmap','-v7.3');
+        [Imin, zmap] = imin(Ein,lambda/refractindex,Z,ps/mag,'zpad',zpad,'mask',mask);
+        save([IminPathStr,'\',filesort(L).firstname,'.mat'],'Imin','zmap','-v7.3');
+
+
+        % The following 3 lines saves cropped and scaled region of Ein
+    %     Ein = Ein./maxint;
+    %     Ein = gather(Ein);
+    %     imwrite(Ein,[OutputPathStr,'\',filesort(L).name]);
+    end
+
+    if runparticledetectionflag == true;
+        if createIminfilesflag == false;
+            % load data from mat files.
+            load([IminPathStr,'/',filesort(L).firstname,'.mat']);
+        end
         
-    
-    % The following 3 lines saves cropped and scaled region of Ein
-%     Ein = Ein./maxint;
-%     Ein = gather(Ein);
-%     imwrite(Ein,[OutputPathStr,'\',filesort(L).name]);
+        Imin=imcrop(Imin,rect);
+        zmap=imcrop(zmap,rect);
 
-
-    Imin=imcrop(Imin,rect);
-    zmap=imcrop(zmap,rect);
-    % 
-    %% Detect Particles and Save
-    [Xauto_min,Yauto_min,Zauto_min] = detection(Imin, zmap, thlevel, disk0, disk1, derstr);
-    LocCentroid(loop).time=[Xauto_min;Yauto_min;Zauto_min]';
-    
+        % 
+        %% Detect Particles and Save
+        [Xauto_min,Yauto_min,Zauto_min] = detection(Imin, zmap, thlevel, disk0, disk1, derstr);
+        LocCentroid(loop).time=[Xauto_min;Yauto_min;Zauto_min]';
+    end
     waitbar(loop/numframes,wb);
 end
 
@@ -215,7 +225,9 @@ Ein=gather(Ein);
 background=gather(background);
 maxint=gather(maxint);
 close(wb);
-save([OutputPathStr,'\',filename(1:end-1),'-th',num2str(thlevel,'%10.0E'),'_dernum',num2str(dilaterode,2),'_day',num2str(round(now*1E5)),'.mat'], 'LocCentroid')
+if runparticledetectionflag == true;
+    save([OutputPathStr,'\',filename(1:end-1),'-th',num2str(thlevel,'%10.0E'),'_dernum',num2str(dilaterode,2),'_day',num2str(round(now*1E5)),'.mat'], 'LocCentroid')
+end
 toc
 %}
 
