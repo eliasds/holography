@@ -33,7 +33,7 @@ clear all
 tic
 
 dirname = '';
-filename    = 'Basler_acA2040-25gm__21407047__20150325_154720390_';
+filename    = 'Basler_acA2040-25gm_';
 ext = 'tiff';
 backgroundfile = 'background.mat';
 createIminfilesflag = false;
@@ -49,21 +49,21 @@ runparticledetectionflag = true;
 % vortloc=[1180, 2110, 2.7E-3]; %location of vorticella in "cuvette in focus"
 % vortloc=[1535, 2105, 0]; %location of vorticella in "vort in focus"
 % thlevel = 0.0005;
-dilaterode = [3,4];
+dilaterode = [3,8];
 derstr = 'D1E0R8D1D1';
 % zpad=2048;
 % radix2=2048;
-firstframe = 269;
+firstframe = 1;
 lastframe = 'numfiles';
-% lastframe = '2';
-skipframes = 2; % skipframes = 1 is default
+% lastframe = '300';
+skipframes = 1; % skipframes = 1 is default
 % IminPathStr = 'matfiles-5imgBG';
 IminPathStr = 'matfiles';
-OutputPathStr = 'analysis-20150410';
+OutputPathStr = 'analysis-20150414';
 % maxint=2; %overide default max intensity: 2*mean(Imin(:))
 % test=1;
-load('constants.mat')
-% thlevel = 0.005;
+load([dirname,'constants.mat'])
+% thlevel = 0.08;
 
 Z=linspace(z1,z2,steps);
 % rect = [vortloc(1)-512,vortloc(2)-1024,1023,1023]; %for "cuvette in focus" data
@@ -226,7 +226,7 @@ background=gather(background);
 maxint=gather(maxint);
 close(wb);
 if runparticledetectionflag == true;
-    save([OutputPathStr,'\',filename(1:end-1),'-th',num2str(thlevel,'%10.0E'),'_dernum',num2str(dilaterode,2),'_day',num2str(round(now*1E5)),'.mat'], 'LocCentroid')
+    save([OutputPathStr,'\',filename(1:end-1),'-th',num2str(thlevel,'%10.0E'),'_dernum',[num2str(dilaterode(1),2),'-',num2str(dilaterode(2),2)],'_day',num2str(round(now*1E5)),'.mat'], 'LocCentroid')
 end
 toc
 %}
