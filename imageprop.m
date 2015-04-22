@@ -38,34 +38,65 @@ Ein(isnan(Ein)) = 0;
 %fig99=figure(99);set(fig99,'colormap',gray,'Position',screensize);
 
 rect = [1,1,(size(Ein)-1)];
-stopclick=0;
-
-for L=1:2:numel(varargin)
-    switch upper(varargin{L})
+stopclick = 0;
+absreal = 'real';
+L = 0;
+while ~isempty(varargin)
+    switch upper(varargin{1})
+        
+        case 'ABS'
+            absreal = 'abs';
+            varargin(1) = [];
+            
+        case 'REAL'
+            absreal = 'real';
+            varargin(1) = [];
 
         case 'PAUSE'
             stopclick = 1;
-            varargin(L) = [];
+            varargin(1) = [];
             
         case 'IMCROP'
-            rect = varargin{L+1};
+            rect = varargin{2};
             rect(3:4) = rect(3:4)-1;
-            varargin(L:L+1) = [];
+            varargin(1:2) = [];
             
         case 'MAXINT'
-            maxint = varargin{L+1};
-            varargin(L:L+1) = [];
+            maxint = varargin{2};
+            varargin(1:2) = [];
+            
+        case 'MININT'
+            minint = varargin{2};
+            varargin(1:2) = [];
+            
+        otherwise
+            L = L + 1;
+            varargin2{L} = varargin{1};
+            varargin(1) = [];
+            if isstr(varargin(1)) == false
+                L = L + 1;
+                varargin2{L} = varargin{1};
+                varargin(1) = [];
+            end
             
     end
 end
 
+if exist('varargin2','var')
+    varargin = varargin2;
+end
 if ~exist('maxint','var')
-    maxint=2*mean(real(Ein(:)));
+    maxint=2*mean(abs(real(Ein(:))));
+end
+if ~exist('minint','var')
+    minint=min(real(Ein(:)));
 end
 Eout = propagate(Ein,lambda,Z(1),ps,varargin{:});
+abs_str1 = ['imagesc(imcrop(',absreal,'(Eout),rect),[minint maxint])'];
 figure(99);
-imagesc(imcrop(real(Eout).^2,rect),[0 maxint.^2])
-% imagesc(abs(Eout).^2,[0 maxint.^2])
+eval(abs_str1)
+% imagesc(imcrop(real(Eout),rect),[minint maxint^2])
+% imagesc(abs(Eout).^2,[0 maxint^2])
 title(['Z = ',num2str(1000*Z(1)),'mm'],'FontSize',16);
 colormap gray; colorbar; axis image;
 drawnow
@@ -74,7 +105,9 @@ pause
 for L=2:numel(Z)
     Eout = propagate(Ein,lambda,Z(L),ps,varargin{:});
     figure(99);
-    imagesc(imcrop(real(Eout).^2,rect),[0 maxint.^2])
+    eval(abs_str1)
+%     imagesc(imcrop(abs(real(Eout)).^2,rect),[minint maxint^2])
+%     imagesc(abs(Eout).^2,[0 maxint^2])
     title(['Z = ',num2str(1000*Z(L)),'mm'],'FontSize',16);
     colormap gray; colorbar; axis image;
     drawnow
