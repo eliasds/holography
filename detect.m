@@ -38,6 +38,7 @@ ext = 'tiff';
 backgroundfile = 'background.mat';
 createIminfilesflag = false;
 runparticledetectionflag = true;
+gpuflag = false;
 % mag = 4; %Magnification
 % ps = 5.5E-6; % Pixel Size in meters
 % refractindex = 1.33;
@@ -55,11 +56,11 @@ derstr = 'D1E0R8D1D1';
 % radix2=2048;
 firstframe = 1;
 lastframe = 'numfiles';
-% lastframe = '300';
+lastframe = '89';
 skipframes = 1; % skipframes = 1 is default
 % IminPathStr = 'matfiles-5imgBG';
 IminPathStr = 'matfiles';
-OutputPathStr = 'analysis-20150414';
+OutputPathStr = 'analysis-20150422';
 % maxint=2; %overide default max intensity: 2*mean(Imin(:))
 % test=1;
 load([dirname,'constants.mat'])
@@ -70,7 +71,7 @@ Z=linspace(z1,z2,steps);
 % rect = [1550-512,2070-1024,1023,1023]; %for "vort in focus" data
 % rect = [2560-radix2,2160-radix2,radix2-1,radix2-1]; %bottom right
 % rect = [vortloc(1)-radix2/2,vortloc(2)-radix2,radix2-1,radix2-1]; %Cropping
-% rect = [1,1,2047,2047]; %temp Cropping
+rect = [114,114,1800,1800]; %temp Cropping
 % rect = [650-512,1865-1024,1023,1023];
 % rect = [Xceil,Yceil,Xfloor-Xceil-1,Yfloor-Yceil-1];
 
@@ -107,7 +108,10 @@ end
 %
 varnam=who('-file',backgroundfile);
 background=load(backgroundfile,varnam{1});
-background=gpuArray(background.(varnam{1}));
+background=background.(varnam{1});
+if gpuflag == true
+    background=gpuArray(background);
+end
 
 if ~exist(OutputPathStr, 'dir')
   mkdir(OutputPathStr);
@@ -209,6 +213,7 @@ for L=firstframe:skipframes:eval(lastframe)
             % load data from mat files.
             load([IminPathStr,'/',filesort(L).firstname,'.mat']);
         end
+        
         
         Imin=imcrop(Imin,rect);
         zmap=imcrop(zmap,rect);
