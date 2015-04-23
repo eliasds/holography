@@ -1,9 +1,18 @@
-dist_thresh = 10;
-newxyzLoc(length(xyzLoc)-1).time = [];
-for L = 1:length(xyzLoc)-1
+dist_thresh = 8;
+% try
+%     [dirname, filename, ext] = fileparts(xyzfile);
+%     varnam=who('-file',xyzfile); xyzLoc=load(xyzfile,varnam{1});
+%     xyzLoc=xyzLoc.(varnam{1});
+% catch err
+% end
+
+xyzLocOld = xyzLoc;
+clear xyzLoc
+xyzLoc(length(xyzLocOld)-1).time = [];
+for L = 1:length(xyzLocOld)-1
     
-mat1 = xyzLoc(L).time;
-mat2 = xyzLoc(L+1).time;
+mat1 = xyzLocOld(L).time;
+mat2 = xyzLocOld(L+1).time;
 l = length(mat1);
 n = length(mat2);
 
@@ -14,16 +23,16 @@ for M = 1:l
     end
 end
 dist_mat_logic = dist_mat < dist_thresh;
-numpartperframe(L) = sum(dist_mat(:));
+numpartperframe(L) = sum(dist_mat_logic(:));
 [mat1row, mat2row] = find(dist_mat_logic);
 avgX = (mat1(mat1row,1) + mat2(mat2row,1))/2;
 avgY = (mat1(mat1row,2) + mat2(mat2row,2))/2;
 avgZ = (mat1(mat1row,3) + mat2(mat2row,3))/2;
 
 
-newxyzLoc(L).time(:,1) = avgX;
-newxyzLoc(L).time(:,2) = avgY;
-newxyzLoc(L).time(:,3) = avgZ;
+xyzLoc(L).time(:,1) = avgX;
+xyzLoc(L).time(:,2) = avgY;
+xyzLoc(L).time(:,3) = avgZ;
 
 end
 
