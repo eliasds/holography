@@ -12,7 +12,7 @@ lambda = 632.8E-9;
 refractindex = 1.33;
 ps = 5.5E-6;
 mag = 4.02;
-maskflag = true;
+maskflag = false;
 createbackgroundflag = false;
 saveconstantsflag = true;
 
@@ -50,6 +50,16 @@ end
 %
 [Imin0001, zmap0001] = imin((HOLO0001),lambda/refractindex,linspace(z1,z2,zsteps),ps/mag,'mask',mask);
 
+%% Save Constants
+%
+if saveconstantsflag == true;
+    
+    save(['imin0001constants.mat'],'ext','z1','z2','zsteps','lambda','refractindex','ps','mag','mask','Imin0001','HOLO0001');
+
+end
+
+%% Plot and Save Imin
+%
 figure
 
 imagesc(Imin0001); colormap gray; colorbar; axis image; axis ij;title(pwd)
@@ -58,13 +68,15 @@ Imin0001 = (Imin0001 - min(Imin0001(:)))./(max(Imin0001(:)) - min(Imin0001(:)));
 
 imwrite(uint8(Imin0001*255), 'Imin0001.png');
 
-%% Save Constants
+%% Plot and Save HOLO
 %
-if saveconstantsflag == true;
-    
-    save(['imin0001constants.mat'],'ext','z1','z2','zsteps','lambda','refractindex','ps','mag','mask','Imin0001','HOLO0001');
+figure
 
-end
+imagesc(HOLO0001); colormap gray; colorbar; axis image; axis ij;title(pwd)
+
+HOLO0001 = (HOLO0001 - min(HOLO0001(:)))./(max(HOLO0001(:)) - min(HOLO0001(:)));
+
+imwrite(uint8(HOLO0001*255), 'HOLO0001.png');
 
 %%
 %
