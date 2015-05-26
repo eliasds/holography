@@ -14,6 +14,7 @@ step = 1;
 mosaic = false;
 rgbcode = 'rggb';
 keep = false;
+flagfilerange = false;
 try
     gpu_num = gpuDeviceCount; %Determines if there is a CUDA enabled GPU
 catch err
@@ -54,6 +55,11 @@ while ~isempty(varargin)
             firstframe = 1;
             step = 2;
             
+        case 'FILERANGE'
+            flagfilerange = true;
+            filerange = varargin{2};
+            varargin(1:2) = [];
+            
         case 'EVEN'
             varargin(1) = [];
             firstframe = 2;
@@ -72,6 +78,10 @@ end
 filesort = dir([filename,'*',ext]);
 numfiles = numel(filesort);
 
+if flagfilerange == false;
+    filerange = [firstframe:step:numfiles];
+end
+
 if gpu_num > 0;
     background=gpuArray(background);
 end
@@ -81,8 +91,8 @@ if nargout > 1
     mov = zeros([size(newfile),numfiles]);
 end
     
-wb = waitbar(1/numfiles,['importing files']);
-for L=firstframe:step:numfiles
+wb = waitbar(1/numel(filerange),['importing files']);
+for L = filerange
     newfile = imread(filesort(L).name);
     if mosaic == true;
         newfile = double(rgb2gray(demosaic(newfile,rgbcode)));
@@ -95,7 +105,7 @@ for L=firstframe:step:numfiles
         mov(:,:,L) = newfile;
     end
     count = count + 1;
-    waitbar(L/numfiles,wb);
+    waitbar(L/numel(filerange),wb);
 end
 close(wb);
 background=background/count;
