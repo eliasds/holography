@@ -4,17 +4,20 @@ tic
 
 %% Setup Constants
 %
-ext = '.tiff';
-z1 = -4.6E-3;
-z2 = 5.1E-3;
+ext = '.tif';
+z1 = 0E-3;
+z2 = 6E-3;
 zsteps = 1001;
 lambda = 632.8E-9;
 refractindex = 1.33;
 ps = 5.5E-6;
 mag = 4.02;
-maskflag = false;
-createbackgroundflag = false;
+
+maskflag = true;
+createbackgroundflag = true;
+backgroundfilerangeflag = true; backgroundfilerange = [1:100];
 saveconstantsflag = true;
+
 
 %% Create Background
 %
@@ -26,7 +29,15 @@ HOLO0001 = double(imread(filesort(1).name));
 
 if createbackgroundflag == true;
 
-    background=avgbg('filename','*.tiff','output','background');
+    if backgroundfilerangeflag == true
+
+        background=avgbg('filename',['*',ext],'output','background','filerange',backgroundfilerange);
+        
+    else
+        
+        background=avgbg('filename',['*',ext],'output','background');
+                
+    end
 
 else
     
@@ -35,6 +46,8 @@ else
 end
 
 HOLO0001 = HOLO0001./background;
+HOLO0001(isnan(HOLO0001)) = nanmean(HOLO0001(:));
+HOLO0001(HOLO0001 > 4*mean(HOLO0001(:))) = mean(HOLO0001(:));
 
 %% Create Mask
 %
