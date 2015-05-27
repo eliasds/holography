@@ -5,8 +5,8 @@ tic
 %% Setup Constants
 %
 ext = '.tif';
-z1 = 0E-3;
-z2 = 6E-3;
+z1 = 1E-3;
+z2 = 6.5E-3;
 zsteps = 1001;
 lambda = 632.8E-9;
 refractindex = 1.33;
@@ -15,8 +15,9 @@ mag = 4.02;
 
 maskflag = true;
 createbackgroundflag = true;
-backgroundfilerangeflag = true; backgroundfilerange = [1:100];
+backgroundfilerangeflag = true; backgroundfilerange = [1:300];
 saveconstantsflag = true;
+iminflag = false;
 
 
 %% Create Background
@@ -61,7 +62,11 @@ end
 
 %% Get Imin of Normalized Image of first Hologram
 %
-[Imin0001, zmap0001] = imin((HOLO0001),lambda/refractindex,linspace(z1,z2,zsteps),ps/mag,'mask',mask);
+if iminflag == true
+    
+    [Imin0001, zmap0001] = imin((HOLO0001),lambda/refractindex,linspace(z1,z2,zsteps),ps/mag,'mask',mask);
+    
+end
 
 %% Save Constants
 %
