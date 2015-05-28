@@ -105,7 +105,7 @@ for L = filerange
         mov(:,:,L) = newfile;
     end
     count = count + 1;
-    waitbar(L/numel(filerange),wb);
+    waitbar(count/numel(filerange),wb);
 end
 close(wb);
 background=background/count;
