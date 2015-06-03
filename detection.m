@@ -1,13 +1,22 @@
 %% Thresholding and Morphological Operators
 %
-function [Xauto_min,Yauto_min,Zauto_min] = detection(Imin, zmap, thlevel, disk0, disk1, derstr);
+function [Xauto_min,Yauto_min,Zauto_min,th,th1,th2,th3,th4,th5,th6,th7,th8,th9] = detection(Imin, zmap, thlevel, derstr);
 
+%%
+% clear all
+% load('constants.mat')
+% load('matfiles\DH_0200.mat')
+% thlevel = .2;
+% derstr = 'R8D5E4D5E4';
+
+%%
 th = Imin<thlevel;
-[m,n]=size(Imin);
+th1 = th;
+[m,n] = size(Imin);
+thIteration = 1;
 
-%{
-derstr = 'D1E0R8D1D1';
-
+%%
+%
 dervector = cell(1,length(derstr));
 for L = 1:length(derstr)
     dervector{L} = derstr(L);
@@ -17,37 +26,41 @@ while ~isempty(dervector)
     switch upper(dervector{1})
         
         case 'D'
-            if dervector{2} == 0
-                th = imdilate(th,disk0);
-            else
-                th = imdilate(th,disk1);
+            thIteration = thIteration + 1;
+            disknum = str2double(dervector{2});
+            diskshape = morphshape(disknum);
+            th = imdilate(th,diskshape);
+            eval(['th',num2str(thIteration),' = th;']);
             dervector(1:2) = [];
             
         case 'E'
-            if dervector{2} == 0
-                th = imerode(th,disk0);
-            else
-                th = imerode(th,disk1);
+            thIteration = thIteration + 1;
+            disknum = str2double(dervector{2});
+            diskshape = morphshape(disknum);
+            th = imerode(th,diskshape);
+            eval(['th',num2str(thIteration),' = th;']);
             dervector(1:2) = [];
             
         case 'R'
-            if dervector{2} == 4
-                th = bwareaopen(th, 4);
-            else
-                th = bwareaopen(th, 8);
+            thIteration = thIteration + 1;
+            disknum = str2double(dervector{2});
+            % th = bwareaopen(th, 4);
+            % th = bwareaopen(th, 8); %Default
+            th = bwareaopen(th,disknum); %Disknum of 8 is default
+            eval(['th',num2str(thIteration),' = th;']);
             dervector(1:2) = [];
             
         otherwise
-            error(['Unexpected option: ' varargin{1}])
+            error(['Unexpected option: ' dervector{1}])
     end
 end
 %}
 
 %% Dilate and Erode with predertimined Shape(s)
 %
-th = bwareaopen(th, 8);
-th = imdilate(th,disk1);
-th = imerode(th,disk0);
+% th2 = bwareaopen(th1, 8);
+% th2 = imdilate(th2,disk0);
+% th3 = imerode(th2,disk1);
 % th = bwareaopen(th, 8);
 % th = imdilate(th,disk1);
 % th = imdilate(th,disk1);
@@ -66,7 +79,9 @@ th = imerode(th,disk0);
 % th = imerode(th,strel('disk', dilaterode, 0));
 
 %% Detect Structures
+thIteration = thIteration + 1;
 th = bwlabel(th,4);
+eval(['th',num2str(thIteration),' = th;']);
 autodetstruct = regionprops(th,'Centroid','PixelIdxList');
 
 % Determine X,Y,Z-values from minimum intensity pixel
