@@ -14,9 +14,9 @@
 % imshow(I);
 % waitforbuttonpress
 % point1 = get(gca,'CurrentPoint') % button down detected
-% rect = [point1(1,1) point1(1,2) 50 100];
-% [r2] = dragrect(rect);
-% J = imcrop(I, rect);
+% rect_xydxdy = [point1(1,1) point1(1,2) 50 100];
+% [r2] = dragrect(rect_xydxdy);
+% J = imcrop(I, rect_xydxdy);
 % figure,imshow(J),title('Cropped Image');
 % 
 % figure, imshow('pout.tif');
@@ -33,70 +33,60 @@ clear all
 tic
 
 dirname = '';
-filename    = 'Basler_acA2040-25gm_';
-ext = 'tiff';
+filename    = 'DH_';
+ext = 'tif';
 backgroundfile = 'background.mat';
 createIminfilesflag = false;
 runparticledetectionflag = true;
-gpuflag = false;
+gpuflag = true;
+vidonflag = false;
+cropflag = true;
+bringtomeanflag = true;
+load([dirname,'constants.mat'])
+thlevel = 0.2;
+derstr = 'R8D5E4';
+firstframe = 101;
+lastframe = 'numfiles'; %Default lastframe value
+lastframe = '300';
+skipframes = 1; % skipframes = 1 is default
+framerate = 10;
+IminPathStr = 'matfiles';
+OutputPathStr = ['analysis-',num2str(year(date)),num2str(month(date),'%05.2u'),num2str(day(date),'%05.2u')];
+% maxint=2; %overide default max intensity: 2*mean(Imin(:))
 % mag = 4; %Magnification
 % ps = 5.5E-6; % Pixel Size in meters
 % refractindex = 1.33;
 % lambda = 632.8E-9; % Laser wavelength in meters
 % z1=1.6E-3;
 % z2=7.3E-3;
-% stepsize=5e-6;
-% steps=1+(z2-z1)/stepsize;
+% zstepsize=5e-6;
+% zsteps=1+(z2-z1)/zstepsize;
 % vortloc=[1180, 2110, 2.7E-3]; %location of vorticella in "cuvette in focus"
 % vortloc=[1535, 2105, 0]; %location of vorticella in "vort in focus"
-% thlevel = 0.0005;
-dilaterode = [3,8];
-derstr = 'D1E0R8D1D1';
 % zpad=2048;
 % radix2=2048;
-firstframe = 1;
-lastframe = 'numfiles';
-lastframe = '89';
-skipframes = 1; % skipframes = 1 is default
-% IminPathStr = 'matfiles-5imgBG';
-IminPathStr = 'matfiles';
-OutputPathStr = 'analysis-20150422';
-% maxint=2; %overide default max intensity: 2*mean(Imin(:))
-% test=1;
-load([dirname,'constants.mat'])
-% thlevel = 0.08;
+% rect_xydxdy = [vortloc(1)-512,vortloc(2)-1024,1023,1023]; %for "cuvette in focus" data
+% rect_xydxdy = [1550-512,2070-1024,1023,1023]; %for "vort in focus" data
+% rect_xydxdy = [2560-radix2,2160-radix2,radix2-1,radix2-1]; %bottom right
+% rect_xydxdy = [vortloc(1)-radix2/2,vortloc(2)-radix2,radix2-1,radix2-1]; %Cropping
+% rect_xydxdy = [114,114,1800,1800]; %temp Cropping
+% rect_xydxdy = [650-512,1865-1024,1023,1023];
+% rect_xydxdy = [Xceil,Yceil,Xfloor-Xceil-1,Yfloor-Yceil-1];
 
-Z=linspace(z1,z2,steps);
-% rect = [vortloc(1)-512,vortloc(2)-1024,1023,1023]; %for "cuvette in focus" data
-% rect = [1550-512,2070-1024,1023,1023]; %for "vort in focus" data
-% rect = [2560-radix2,2160-radix2,radix2-1,radix2-1]; %bottom right
-% rect = [vortloc(1)-radix2/2,vortloc(2)-radix2,radix2-1,radix2-1]; %Cropping
-rect = [114,114,1800,1800]; %temp Cropping
-% rect = [650-512,1865-1024,1023,1023];
-% rect = [Xceil,Yceil,Xfloor-Xceil-1,Yfloor-Yceil-1];
 
-% ps = ps / mag; % Effective Pixel Size in meters
-% lambda = lambda / refractindex; % Effective laser wavelength in meters
+Z=linspace(z1,z2,zsteps);    
 
-% 
+%% Turn off these warning messages:
 % warning('off','images:imfindcircles:warnForLargeRadiusRange');
 % warning('off','images:imfindcircles:warnForSmallRadius');
 
 
-
-%% Create Dilate and Erode Parameters
-for L = 1:numel(dilaterode)
-    eval(['disk',int2str(L-1),' = morphshape(dilaterode(L));'])
-%     disk{L} = morphshape(dilaterode(L)); % more efficient code
-end
-
-
-%%
+%% List raw image filenames
 filename = strcat(dirname,filename);
-filesort = dir([filename,'*.',ext]);
+filesort = dir([filename,'*',ext]);
 numfiles = numel(filesort);
 numframes = floor((eval(lastframe) - firstframe + 1)/skipframes);
-LocCentroid(numframes).time=[];
+xyzLocCentroid(numframes).time=[];
 Eout(numfiles).time=[];
 for L = 1:numfiles
     [filesort(L).pathstr, filesort(L).firstname, filesort(L).ext] = ...
@@ -104,8 +94,7 @@ for L = 1:numfiles
     %filesort(i).matname=strcat(filesort(i).matname,'.mat');
 end
 
-
-%
+%% Import Background file
 varnam=who('-file',backgroundfile);
 background=load(backgroundfile,varnam{1});
 background=background.(varnam{1});
@@ -113,6 +102,7 @@ if gpuflag == true
     background=gpuArray(background);
 end
 
+%% Create new output directories
 if ~exist(OutputPathStr, 'dir')
   mkdir(OutputPathStr);
 end
@@ -121,31 +111,33 @@ if ~exist(IminPathStr, 'dir')
   mkdir(IminPathStr);
 end
 
+%% Add some default variables if they don't exist
+if ~exist('rect_xydxdy','var')
+    if ~exist('rect','var')
+        rect_xydxdy = [1 1 size(background)-1];
+    else
+        eval('rect_xydxdy = rect;'); clear('rect');
+    end
+    top = 1;
+    bottom = length(background);
+end
 
-% for L=1:1:numfiles
-% %     Holo = imread([filesort(L).name]);
-%     Holo = double(gpuArray(imread([filesort(L).name])))./background;
-%     Ein = imcrop(Holo,rect);
-%     maxint = 2*mean(Ein(:));
-%     Ein(Ein>maxint) = maxint;
-%     Ein = Ein./maxint;
-%     Ein = gather(Ein);
-%     imwrite(Ein,['1024\',filesort(L).name]);
-% end
+%% Initialize movie file
+mov(1:numframes) = struct('cdata',zeros(rect_xydxdy(4)+1,rect_xydxdy(3)+1,3,'uint8'),'colormap',[]);
 
-%
-
-Ein = gather((double(imread([filesort(1).name]))./background));
+Ein = (double(imread([filesort(1).name]))./background);
 % Ein = gather((double(imread([filesort(1).name]))));
 % Ein = gather(double(background));
 % Ein = gather((double(imread([filesort(1).name]))./double(imread([filesort(skipframes+1).name]))));
+if cropflag == true
+    Ein = imcrop(Ein,[top,top,bottom-top,bottom-top]);
+end
+EinNoZeros = Ein; EinNoZeros(EinNoZeros==0)=NaN;
 if ~exist('maxint','var')
-    maxint=2*mean(real(Ein(:)));
+    maxint=2*nanmean(real(EinNoZeros(:)));
 end
 
-if exist('test','var')
-    numfiles=test;
-end
+
 
 
 
@@ -153,7 +145,7 @@ end
 %{
 % Holo_0001 = (double(imread([filesort(L).name]))./background);
 % [Imin_0001, ~] = imin(Holo_0001,lambda/refractindex,Z,ps/mag,zpad);
-Imin0001 = imcrop(Imin,rect);
+Imin0001 = imcrop(Imin,rect_xydxdy);
 nbins = round(sqrt(numel(Imin0001)));
 [bincount,edges] = histcounts(Imin0001(:),nbins);
 figure(6);histogram(Imin0001(:),nbins)
@@ -177,8 +169,8 @@ axis([0,max(edges),0,5000]);
 %
 
 save([IminPathStr,'/','constants.mat'], 'lambda', 'mag', 'maxint',...
-    'ps', 'refractindex', 'steps', 'stepsize', 'thlevel', 'vortloc',...
-    'z0', 'z1', 'z2', 'z3', 'z4')
+    'ps', 'refractindex', 'zsteps', 'zstepsize', 'thlevel', 'vortloc',...
+    'z0', 'z1', 'z2', 'z3', 'z4','rect_xydxdy','top','bottom')
 
 loop = 0;
 wb = waitbar(0/numframes,'Analysing Data for Imin and Detecting Particles');
@@ -191,12 +183,26 @@ for L=firstframe:skipframes:eval(lastframe)
     %     background = double(imread([filesort(L+skipframes).name]));
     %     Ein = Holo./background;
         Ein = (double(imread([filesort(L).name]))./background);
-    %     Ein = imcrop(Ein,rect);
+    %     Ein = imcrop(Ein,rect_xydxdy);
         % Ein=Ein(vortloc(2)-radix2+1:vortloc(2),vortloc(1)-radix2/2:vortloc(1)-1+radix2/2);
         %Ein=Ein(1882-768:1882+255,1353-511:1353+512);
         %Ein = (double(background));
         %Ein(isnan(Ein)) = mean(background(:));
-        Ein(Ein>maxint)=maxint;
+%         Ein(Ein>maxint)=maxint;
+        
+        if cropflag == true
+            Ein = imcrop(Ein,[top,top,bottom-top,bottom-top]);
+        end
+        EinNoZeros = Ein; EinNoZeros(EinNoZeros==0)=NaN;
+        meanint = nanmean(EinNoZeros(:));
+        maxint = 2*nanmean(EinNoZeros(:));
+        if bringtomeanflag == true
+            Ein(Ein > maxint) = meanint;
+            Ein(isnan(Ein)) = meanint;
+        else
+            Ein(Ein > maxint) = maxint;
+            Ein(isnan(Ein)) = 0;
+        end
 
         [Imin, zmap] = imin(Ein,lambda/refractindex,Z,ps/mag,'zpad',zpad,'mask',mask);
         save([IminPathStr,'\',filesort(L).firstname,'.mat'],'Imin','zmap','-v7.3');
@@ -215,13 +221,20 @@ for L=firstframe:skipframes:eval(lastframe)
         end
         
         
-        Imin=imcrop(Imin,rect);
-        zmap=imcrop(zmap,rect);
+        Imin=imcrop(Imin,rect_xydxdy);
+        zmap=imcrop(zmap,rect_xydxdy);
 
         % 
         %% Detect Particles and Save
-        [Xauto_min,Yauto_min,Zauto_min] = detection(Imin, zmap, thlevel, disk0, disk1, derstr);
-        LocCentroid(loop).time=[Xauto_min;Yauto_min;Zauto_min]';
+        [Xauto_min,Yauto_min,Zauto_min,th,th1,th2,th3] = detection(Imin, zmap, thlevel, derstr);
+        xyzLocCentroid(loop).time=[Xauto_min;Yauto_min;Zauto_min]';
+        
+            if vidonflag==true
+                mov(loop).cdata = uint8(th3(1:1024,1:1024))*255;
+                mov(loop).cdata(:,:,2) = mov(loop).cdata(:,:,1);
+                mov(loop).cdata(:,:,3) = mov(loop).cdata(:,:,1);
+            end
+
     end
     waitbar(loop/numframes,wb);
 end
@@ -231,114 +244,21 @@ background=gather(background);
 maxint=gather(maxint);
 close(wb);
 if runparticledetectionflag == true;
-    save([OutputPathStr,'\',filename(1:end-1),'-th',num2str(thlevel,'%10.0E'),'_dernum',[num2str(dilaterode(1),2),'-',num2str(dilaterode(2),2)],'_day',num2str(round(now*1E5)),'.mat'], 'LocCentroid')
-end
-toc
-%}
-
-
-%% Create Imin MAT files only
-%{
-
-save([IminPathStr,'/','constants.mat'], 'lambda', 'mag', 'maxint',...
-    'ps', 'refractindex', 'steps', 'stepsize', 'thlevel', 'vortloc',...
-    'z0', 'z1', 'z2', 'z3', 'z4')
-
-loop = 0;
-wb = waitbar(0/numframes,'Analysing Data for Imin');
-for L=firstframe:skipframes:eval(lastframe)
-    loop = loop + 1;
-    % import data from tif files.
-    % Ein = (double(imread([filesort(L).name])));
-    Ein = (double(imread([filesort(L).name]))./background);
-    Ein = imcrop(Ein,rect);
-    %Ein = (double(background));
-    %Ein(isnan(Ein)) = mean(background(:));
-    Ein(Ein>maxint)=maxint;
-
-    
-    [Imin, zmap] = imin(Ein,lambda/refractindex,Z,ps/mag,zpad);
-    save([IminPathStr,'\',filesort(L).firstname,'.mat'],'Imin','zmap','-v7.3');
-    
-    
-    % The following 3 lines saves cropped and scaled region of Ein
-%     Ein = Ein./maxint;
-%     Ein = gather(Ein);
-%     imwrite(Ein,[OutputPathStr,'\',filesort(L).name]);
-
-
-    waitbar(loop/numframes,wb);
+    save([OutputPathStr,'\',filename(1:end-1),'-th',num2str(thlevel,'%10.0E'),'_dernum',[num2str(dilaterode(1),2),'-',num2str(dilaterode(2),2)],'_day',num2str(round(now*1E5)),'.mat'], 'xyzLocCentroid')
+    save([OutputPathStr,'\',filename(1:end-1),'-th',num2str(thlevel,'%10.0E'),'_dernum',[num2str(dilaterode(1),2),'-',num2str(dilaterode(2),2)],'_day',num2str(round(now*1E5)),'constants.mat'], 'lambda', 'mag', 'maxint',...
+        'ps', 'refractindex', 'zsteps', 'zstepsize', 'thlevel', 'vortloc',...
+        'z0', 'z1', 'z2', 'z3', 'z4','rect_xydxdy','top','bottom')
 end
 
-Ein=gather(Ein);
-background=gather(background);
-maxint=gather(maxint);
-close(wb);
-toc
-%}
-
-% %% Thresholding and Morphological Operators
-% %
-% function [Xauto,Yauto,Zauto_centroid,Zauto_mean,Zauto_min] = detection(Imin, zmap, thlevel, dilaterode);
-% th = Imin<thlevel;
-% disk1 = strel('disk', dilatenum, 0);
-% th = imdilate(th,strel('disk', dilaterode, 0));
-% th = imerode(th,strel('disk', dilaterode, 0));
-% th = imdilate(th,strel('disk', dilaterode, 0));
-% th = imdilate(th,strel('disk', dilaterode, 0));
-% th = imerode(th,strel('disk', dilaterode, 0));
-% th = imerode(th,strel('disk', dilaterode, 0));
-% th = imerode(th,strel('disk', dilaterode, 0));
-% th = bwlabel(th,4);
-% autodetstruct = regionprops(th,'Centroid','PixelIdxList');
-% xy = [autodetstruct.Centroid];
-% Xauto = xy(1:2:end);
-% Yauto = xy(2:2:end);
-% 
-% %Linear Interpolation Method, using 4 pixels nearest centroid(X-Y) to
-% %determine z-depth. more acurate centroid method
-% Zauto_centroid = interp2(1:size(zmap,2),1:size(zmap,1),zmap,Xauto,Yauto);
-% 
-% %Determine mean Z-value from all pixels in region (biasing errors)
-% Zauto_mean=zeros(size(Xauto));
-% 
-% %Depth of Minimum intensity pixel
-% Zauto_min=zeros(size(Xauto));
-% for i = 1:numel(autodetstruct)
-%     idx = autodetstruct(i).PixelIdxList;
-%     Zauto_mean(i) = mean(zmap(idx));
-%     
-%     particlepixels = Imin(idx);
-%     [~,minidx] = min(particlepixels);
-%     Zauto_min(i) = zmap(idx(minidx));
-% end
-
-
-
-
-%% Detect Particles and Save
-%{
-loop = 0;
-wb = waitbar(0/numframes,'Locating Particle Locations from Data');
-%for L=1:numframes
-for L=firstframe:skipframes:eval(lastframe)
-    loop = loop + 1;
-
-
-    % load data from mat files.
-    load([IminPathStr,'/',filesort(L).firstname,'.mat']);
-    Imin=imcrop(Imin,rect);
-    zmap=imcrop(zmap,rect);
-    % 
-    %% Detect Particles and Save
-    [Xauto_min,Yauto_min,Zauto_min] = detection(Imin, zmap, thlevel, disk0, disk1, derstr);
-    LocCentroid(loop).time=[Xauto_min;Yauto_min;Zauto_min]';
-    %
-    %
-    waitbar(loop/numframes,wb);
+if vidonflag==true
+    writerObj = VideoWriter([OutputPathStr,'\',filename(1:end-1),'-th',num2str(thlevel,'%10.0E'),'_dernum',[num2str(dilaterode(1),2),'-',num2str(dilaterode(2),2)],'_day',num2str(round(now*1E5)),'_2DthresholdVideo'],'MPEG-4');
+    writerObj.FrameRate = framerate;
+    open(writerObj);
+    writeVideo(writerObj,mov);
+    close(writerObj);
 end
 
-close(wb);
-save([OutputPathStr,'/',filename(1:end-1),'-th',num2str(thlevel,'%10.0E'),'_dernum',num2str(dilaterode,2),'_day',num2str(round(now*1E5)),'.mat'], 'LocCentroid')
-%}
 toc
+
+
+
