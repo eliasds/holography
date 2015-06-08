@@ -1,4 +1,4 @@
-dist_thresh = 8;
+dist_thresh = 15;
 % try
 %     [dirname, filename, ext] = fileparts(xyzfile);
 %     varnam=who('-file',xyzfile); xyzLoc=load(xyzfile,varnam{1});
@@ -6,15 +6,16 @@ dist_thresh = 8;
 % catch err
 % end
 
-xyzLocOld = xyzLoc;
-clear xyzLoc
-xyzLoc(length(xyzLocOld)-1).time = [];
+tic
+xyzLocOld = xyzLocCentroid;
+clear xyzLocCentroid
+xyzLocCentroid(length(xyzLocOld)-1).time = [];
 for L = 1:length(xyzLocOld)-1
     
 mat1 = xyzLocOld(L).time;
 mat2 = xyzLocOld(L+1).time;
-l = length(mat1);
-n = length(mat2);
+[l,~] = size(mat1);
+[n,~] = size(mat2);
 
 dist_mat = nan(l,n);
 for M = 1:l
@@ -30,10 +31,11 @@ avgY = (mat1(mat1row,2) + mat2(mat2row,2))/2;
 avgZ = (mat1(mat1row,3) + mat2(mat2row,3))/2;
 
 
-xyzLoc(L).time(:,1) = avgX;
-xyzLoc(L).time(:,2) = avgY;
-xyzLoc(L).time(:,3) = avgZ;
+xyzLocCentroid(L).time(:,1) = avgX;
+xyzLocCentroid(L).time(:,2) = avgY;
+xyzLocCentroid(L).time(:,3) = avgZ;
 
 end
 
+toc
     
