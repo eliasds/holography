@@ -6,18 +6,32 @@ if ~exist(OutputPathStr, 'dir')
 end
 
 thlevel = 0;
-for thlevel = 0.2:0.05:0.3
+%     thparam = 0.5;
+%     thparam = 0.4;
+%     thparam = 0.333;
+%     thparam = 0.25;
+%     thparam = 0.1;
+%     thparam = 0.05;
+%     thparam = 0.01;
+thparamlist = [.4,.333,.25];
+for thparam = thparamlist
 %     newdir = ['th',thlevel]
 %     mkdir(newdir);
 %     thlevel = thlevel + 0.05;
-    for M = 3:9
-        [Imin,zmap,constants,xyzLocCentroid,th] = detect('thlevel', thlevel, 'derstr',['R8D',num2str(M),'E',num2str(M-1),'R8D',num2str(M),'E',num2str(M-1)],'firstframe',151,'lastframe',250);
+    for M = 3
+        
+        [Imin,zmap,constants,xyzLocCentroid,th] = detect('thparam', thparam, 'derstr',['R8D',num2str(M),'E',num2str(M-1),'R8E',num2str(M-1),'D',num2str(M),'E',num2str(M-1)],'firstframe',151,'lastframe',220);
+        [Imin,zmap,constants,xyzLocCentroid,th] = detect('thparam', thparam, 'derstr',['R8D',num2str(M),'E',num2str(M-1),'R8E',num2str(M-1),'D',num2str(M),'E',num2str(M+1)],'firstframe',151,'lastframe',220);
     end
-    for M = 2:8
-        [Imin,zmap,constants,xyzLocCentroid,th] = detect('thlevel', thlevel, 'derstr',['R8D',num2str(M),'E',num2str(M+1),'R8D',num2str(M),'E',num2str(M+1)],'firstframe',151,'lastframe',250);
+    for M = 3:4
+        
+        [Imin,zmap,constants,xyzLocCentroid,th] = detect('thparam', thparam, 'derstr',['R8D',num2str(M),'E',num2str(M-1),'R8E',num2str(M-1),'D',num2str(M)],'firstframe',151,'lastframe',220);
     end
-    for M = 2:9
-        [Imin,zmap,constants,xyzLocCentroid,th] = detect('thlevel', thlevel, 'derstr',['R8D',num2str(M),'E',num2str(M),'R8D',num2str(M),'E',num2str(M)],'firstframe',151,'lastframe',250);
+    for M = 3:6
+        [Imin,zmap,constants,xyzLocCentroid,th] = detect('thparam', thparam, 'derstr',['R8D',num2str(M),'E',num2str(M-1),'R8D',num2str(M),'E',num2str(M-1)],'firstframe',151,'lastframe',220);
+        [Imin,zmap,constants,xyzLocCentroid,th] = detect('thparam', thparam, 'derstr',['R8D',num2str(M),'E',num2str(M-1),'R8D',num2str(M),'E',num2str(M+1)],'firstframe',151,'lastframe',220);
+        [Imin,zmap,constants,xyzLocCentroid,th] = detect('thparam', thparam, 'derstr',['R8D',num2str(M),'E',num2str(M-1),'R8D',num2str(M-1),'E',num2str(M)],'firstframe',151,'lastframe',220);
+        [Imin,zmap,constants,xyzLocCentroid,th] = detect('thparam', thparam, 'derstr',['R8D',num2str(M),'E',num2str(M-1),'R8D',num2str(M),'E',num2str(M-1),'R8D',num2str(M-1),'E',num2str(M)],'firstframe',151,'lastframe',220);
     end
 end
 toc

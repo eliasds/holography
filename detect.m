@@ -49,6 +49,9 @@ gpuflag = true;
 particlevideoflag = true;
 earlycropflag = true;
 bringtomeanflag = true;
+detectbestthreshflag = true;
+thparam = 0.333;
+histcutoff = 0.75;
 try
     load([dirname,constantsfile])
 catch
@@ -181,6 +184,14 @@ while ~isempty(varargin)
             bringtomeanflag = true;
             varargin(1) = [];
             
+        case 'THPARAM'
+            thparam = varargin{2};
+            varargin(1:2) = [];
+            
+        case 'HISTCUTOFF'
+            histcutoff = varargin{2};
+            varargin(1:2) = [];
+            
         otherwise
             error(['Unexpected option: ' varargin{1}])
             
@@ -271,29 +282,6 @@ if runparticledetectionflag == true
     if particlevideoflag==true
         threshmov(1:numframes) = struct('cdata',zeros(rect_xydxdy(4)+1,rect_xydxdy(3)+1,3,'uint8'),'colormap',[]);
     end
-    % Determine optimal threshold (thlevel) from first Imin
-    %{
-    % Holo_0001 = (double(imread([filesort(L).name]))./background);
-    % [Imin_0001, ~] = imin(Holo_0001,lambda/refractindex,Z,ps/mag,zpad);
-    Imin0001 = imcrop(Imin,rect_xydxdy);
-    nbins = round(sqrt(numel(Imin0001)));
-    [bincount,edges] = histcounts(Imin0001(:),nbins);
-    figure(6);histogram(Imin0001(:),nbins)
-    nbins=500;
-    bincount = bincount(1:nbins);
-    edges = edges(1:nbins);
-    [M I] = min(bincount(1:nbins))
-    figure(7);plot(edges,bincount)
-    I2 = round(I/2);
-    th_new = edges(I2)
-    axis([0,max(edges),0,5000]);
-
-    figure(10);bincount6 = smooth(bincount,'lowess');plot(edges,bincount6)
-    [M I] = min(bincount6(1:nbins))
-    I2 = round(I/10);
-    th_new = edges(I2)
-    axis([0,max(edges),0,5000]);
-    %}
 end
 
 
@@ -361,6 +349,11 @@ for L=firstframe:skipframes:eval(lastframe)
         % Load data from Imin mat files if not just computed
         if createIminfilesflag == false;
             load([IminPathStr,filesort(L).firstname,'.mat']);
+        end
+        
+        % Detect Best Imin Threshold Level
+        if detectbestthreshflag == true;
+            thlevel = bestthresh( Imin, thparam, histcutoff );
         end
         
         % Secondary crop to remove Fresnel boudary effects
