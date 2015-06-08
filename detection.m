@@ -10,6 +10,9 @@ function [Xauto_min,Yauto_min,Zauto_min,th,th1,th2,th3,th4,th5,th6,th7,th8,th9] 
 % derstr = 'R8D5E4D5E4';
 
 %%
+h = 1/9*ones(3);
+zmap = filter2(h,zmap); %Smooth zmap by averaging over all adjacent pixels
+% zmap = filter2(h,filter2(h,zmap));
 th = Imin<thlevel;
 th1 = th;
 [m,n] = size(Imin);
@@ -56,15 +59,6 @@ while ~isempty(dervector)
 end
 %}
 
-%% Dilate and Erode with predertimined Shape(s)
-%
-% th2 = bwareaopen(th1, 8);
-% th2 = imdilate(th2,disk0);
-% th3 = imerode(th2,disk1);
-% th = bwareaopen(th, 8);
-% th = imdilate(th,disk1);
-% th = imdilate(th,disk1);
-%}
 
 %% Dilate or Erode with a single number
 % th = imdilate(th,ones(4));
@@ -82,7 +76,7 @@ end
 thIteration = thIteration + 1;
 th = bwlabel(th,4);
 eval(['th',num2str(thIteration),' = th;']);
-autodetstruct = regionprops(th,'Centroid','PixelIdxList');
+autodetstruct = regionprops(th,'Centroid','PixelIdxList','PixelList');
 
 % Determine X,Y,Z-values from minimum intensity pixel
 Xauto_min=zeros(size(autodetstruct))';
