@@ -93,8 +93,12 @@ while ~isempty(varargin)
             varargin(1) = [];
             
         case 'CROP'
-            rect = [(varargin{2}), 1023,1023];
-%             rect = [1550-512,2070-1024,1023,1023];
+            if numel(varargin{2}) ~= 4
+                rect = [(varargin{2}(1:2)), 1023,1023];
+            else
+                rect = [varargin{2}];
+                rect(3:4)=rect(3:4)-1;
+            end
             varargin(1:2) = [];
             
         case 'RESCALE'
