@@ -119,6 +119,6 @@ if saveon == true;
     if max(background) > 256
         imwrite(uint16(background), [outputFileName,ext], 'tif');
     else
-        imwrite(uint8(background), [outputFileName,ext], 'tif');
+        imwrite(uint8(background), [outputFileName,'.png'], 'png');
     end
 end
