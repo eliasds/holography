@@ -1,4 +1,4 @@
-function makevideo(inputFileName, varargin)
+function background = makevideo(inputFileName, varargin)
 %% Create a video from any series of image inputs
 % Version 3.0
 % inputs:
@@ -18,8 +18,11 @@ saveoff = 0;
 framerate = 20;
 resize = 1;
 background = 1;
+newbackground = 0;
 outputpathstr = 'analysis';
 outputFileName = 'video';
+backgroundFileName = 'background';
+averagebgflag = false;
 vidtype = 'MPEG-4';
 [pathstr, firstname, ext] = fileparts(inputFileName);
 firstname = strrep(firstname, '*', '');
@@ -78,6 +81,7 @@ while ~isempty(varargin)
             lastframe = trimframes(2);
             skipframes = trimframes(3);
             numframes = floor((1+lastframe-firstframe)/skipframes);
+            backgroundFileName = ['background',num2str(firstframe),'to',num2str(lastframe),'skip',num2str(skipframes)];
             varargin(1:2) = [];
             
         case 'FPS'
@@ -111,6 +115,10 @@ while ~isempty(varargin)
             background=load(background,varnam{1});
             background=background.(varnam{1});
             varargin(1:2) = [];
+            
+        case 'AVERAGE'
+            averagebgflag = true;
+            varargin(1) = [];
             
         otherwise
             error(['Unexpected option: ' varargin{1}])
@@ -155,6 +163,7 @@ for loop=1:numframes
     else
         Ein = double(imread(filesort(L, 1).name))./background;
     end
+    newbackground = newbackground + Ein;
     Ein = imcrop(Ein,rect);
     Ein = imresize(Ein,resize);
 %     Ein = fp_imload(filesort(L, 1).name,'background.mat');
@@ -177,6 +186,7 @@ for loop=1:numframes
     waitbar((loop-1)/numframes,wb);
 end
 close(writerObj);
+background = newbackground/numframes;
 close(wb);
 
 if gpu_num > 0;
@@ -186,6 +196,15 @@ end
 if saveoff == 1;
 %     save([outputFileName, '.mat'],'vidout');
 %    imwrite(uint8(vidout), [outputFileName, '.tif'], 'tif');
+end
+
+if averagebgflag == true;
+    save([backgroundFileName, '.mat'],'background');
+    if max(background) > 256
+        imwrite(uint16(background), [backgroundFileName,'.tif'], 'tif');
+    else
+        imwrite(uint8(background), [backgroundFileName,'.png'], 'png');
+    end
 end
 
 toc
