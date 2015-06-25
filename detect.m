@@ -1,4 +1,4 @@
-function [Imin,zmap,constants,xyzLocCentroid,th,Xauto_min,Yauto_min,Zauto_min,Ein,background] = detect(varargin)
+function [Imin,zmap,constants,xyzLocCentroid,th,Xauto_min,Yauto_min,Zauto_min,Ein,background,threshmov] = detect(varargin)
 %% Detect - Find the minimum intensity of all images in folder, detect
 %           particle locations, and saves all.
 %           
@@ -48,10 +48,8 @@ runparticledetectionflag = true;
 gpuflag = true;
 particlevideoflag = true;
 earlycropflag = true;
-bringtomeanflag = true;
+bringtomeanflag = false;
 detectbestthreshflag = true;
-thparam = 0.333;
-histcutoff = 0.75;
 try
     load([dirname,constantsfile])
 catch
@@ -66,12 +64,13 @@ catch
     end
 end
 thlevel = 0.2;
+thparam = 0.333;
 derstr = 'R8D5E4';
-firstframe = 151;
+firstframe = 1;
 lastframe = 'numfiles'; %Default lastframe value
-lastframe = '250';
-skipframes = 1; % skipframes = 1 is default
-framerate = 10;
+% lastframe = '250';
+skipframes = 10; % skipframes = 1 is default
+framerate = 20;
 IminPathStr = 'matfiles\';
 OutputPathStr = ['analysis-',datestr(now,'yyyymmdd'),'\'];
 % maxint=2; %overide default max intensity: 2*mean(Imin(:))
@@ -119,6 +118,7 @@ while ~isempty(varargin)
             
         case 'FILENAME'
             filename = varargin{2};
+            [dirname, filename, ext] = fileparts(filename);
             varargin(1:2) = [];
             
         case 'EARLYCROP'
@@ -188,10 +188,6 @@ while ~isempty(varargin)
             thparam = varargin{2};
             varargin(1:2) = [];
             
-        case 'HISTCUTOFF'
-            histcutoff = varargin{2};
-            varargin(1:2) = [];
-            
         otherwise
             error(['Unexpected option: ' varargin{1}])
             
@@ -207,23 +203,8 @@ end
 
 %% Setup secondary constants and variables
 %
-Z = linspace(z1,z2,zsteps);
-loop = 0;
-filename = strcat(dirname,filename);
-filesort = dir([filename,'*',ext]);
-numfiles = numel(filesort);
-numframes = floor((eval(lastframe) - firstframe + 1)/skipframes);
-xyzLocCentroid(numframes).time=[];
-% Eout(numfiles).time=[];
-for L = 1:numfiles
-    [filesort(L).pathstr, filesort(L).firstname, filesort(L).ext] = ...
-        fileparts([filesort(L).name]);
-    %filesort(i).matname=strcat(filesort(i).matname,'.mat');
-end
-
-
 % Constants to save
-namesofconstants = {'lambda','mag','maxint','ps','refractindex','zsteps','zstepsize','thlevel','vortloc','z0','z1','z2','z3','z4','rect_xydxdy','top','bottom','mask'};
+namesofconstants = {'lambda','mag','maxint','ps','refractindex','zsteps','zstepsize','thlevel','vortloc','z0','z1','z2','z3','z4','rect_xydxdy','top','bottom','mask','derstr','thparam'};
 
 
 % Import Background file
@@ -236,6 +217,7 @@ end
 
 
 % Add some default variables if they don't exist
+rect_xydxdy = [1 1 1800 1800]
 if ~exist('rect_xydxdy','var')
     if ~exist('rect','var')
         rect_xydxdy = [1 1 size(background)-1];
@@ -244,6 +226,37 @@ if ~exist('rect_xydxdy','var')
     end
     top = 1;
     bottom = length(background);
+end
+if ~exist('zstepsize','var')
+    try
+        zstepsize = stepsize;
+        clear stepsize;
+    catch
+        zstepsize = input('zstepsize not found. What should it be? (5E-6): ','s');
+    end
+end
+if ~exist('zsteps','var')
+    try
+        eval('zsteps = steps;'); clear('steps');
+    catch
+        zsteps = 1 + abs(z1-z2)/zstepsize;
+    end
+end
+Z = linspace(z1,z2,zsteps);
+loop = 0;
+
+
+% List files to import
+filename = strcat(dirname,filename);
+filesort = dir([filename,'*',ext]);
+numfiles = numel(filesort);
+numframes = floor((eval(lastframe) - firstframe + 1)/skipframes);
+xyzLocCentroid(numframes).time=[];
+% Eout(numfiles).time=[];
+for L = 1:numfiles
+    [filesort(L).pathstr, filesort(L).firstname, filesort(L).ext] = ...
+        fileparts([filesort(L).name]);
+    %filesort(i).matname=strcat(filesort(i).matname,'.mat');
 end
 
 
@@ -328,7 +341,11 @@ for L=firstframe:skipframes:eval(lastframe)
         end
 
         % Save Imin and zmap files
-        [Imin, zmap] = imin(Ein,lambda/refractindex,Z,ps/mag,'zpad',zpad,'mask',mask);
+        if gpuflag == true;
+            [Imin, zmap] = imin(Ein,lambda/refractindex,Z,ps/mag,'zpad',zpad,'mask',mask);
+        else
+            [Imin, zmap] = imin(Ein,lambda/refractindex,Z,ps/mag,'cpu','zpad',zpad,'mask',mask);
+        end
         save([IminPathStr,'\',filesort(L).firstname,'.mat'],'Imin','zmap','-v7.3');
 
 
@@ -353,7 +370,7 @@ for L=firstframe:skipframes:eval(lastframe)
         
         % Detect Best Imin Threshold Level
         if detectbestthreshflag == true;
-            thlevel = bestthresh( Imin, thparam, histcutoff );
+            thlevel = bestthresh( Imin, thparam );
         end
         
         % Secondary crop to remove Fresnel boudary effects

@@ -1,11 +1,10 @@
-function [ thlevel ] = bestthresh( Imin, thparam, histcutoff )
+function [ thlevel ] = bestthresh( Imin, thparam, plotflag )
 %bestthresh find the best threshold parameter based on histogram
 %   Detailed explanation goes here
 
 % Determine optimal threshold (thlevel) from Imin
 %
 if nargin == 1
-    histcutoff = 0.75;
 %     thparam = 0.5;
 %     thparam = 0.4;
     thparam = 0.333;
@@ -13,34 +12,35 @@ if nargin == 1
 %     thparam = 0.1;
 %     thparam = 0.05;
 %     thparam = 0.01;
-elseif nargin == 2
-    histcutoff = 0.75;
+%     thparam = 0.0;
+%     thparam = -0.01;
+%     thparam = -0.05;
 end
 
-% Imin = imcrop(Imin,rect_xydxdy);
 nbins = round(sqrt(numel(Imin)));
 [bincount,edges] = histcounts(Imin(:),nbins);
 % figure;histogram(Imin(:),nbins);title('histogram(Imin(:),nbins)')
 
-nbins=round(histcutoff*nbins);
+[maxvalue,maxindex] = max(bincount(round(nbins/50):end));
+maxindex = maxindex + round(nbins/50)-1;
+nbins = maxindex + round(nbins/50);
 bincount = bincount(1:nbins);
-edges = edges(1:nbins);
-
-% figure;plot(edges,bincount);title('plot(edges,bincount)')
-% [minvalue minindex] = min(bincount(:));
-% [maxvalue maxindex] = max(bincount(:));
-% minmaxdiff = maxindex - minindex
-% thlevel_index = round(minindex + thparam*minmaxdiff)
-% thlevel = edges(thlevel_index)
+edges = edges(1:nbins+1);
 
 bincountsmooth = smooth(bincount,'lowess');
-% figure;plot(edges,bincountsmooth);title('plot(edges,bincountsmooth)')
-[minvaluesmooth minindexsmooth] = min(bincountsmooth(1:nbins));
-[maxvaluesmooth maxindexsmooth] = max(bincountsmooth(1:nbins));
+if exist('plotflag', 'var')
+    figure;plot(edges(2:end),bincountsmooth);title('plot(edges,bincountsmooth)')
+end
+[minvaluesmooth,minindexsmooth] = min(bincountsmooth(1:nbins));
+[maxvaluesmooth,maxindexsmooth] = max(bincountsmooth(ceil(nbins/50):end));
+maxindexsmooth = maxindexsmooth + round(nbins/50)-1;
 minmaxsmoothdiff = maxindexsmooth - minindexsmooth;
 thlevel_index = round(minindexsmooth + thparam*minmaxsmoothdiff);
-thlevel = edges(thlevel_index);
-% axis([0,max(edges),0,5000]);
+if thlevel_index < 1
+    warning('thparam too low. Setting thlevel to lowest possible value.');
+    thlevel_index = 1;
+end
+thlevel = sum(edges(thlevel_index:thlevel_index+1))/2;
 
 end
 
