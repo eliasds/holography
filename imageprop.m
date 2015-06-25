@@ -39,6 +39,7 @@ Ein(isnan(Ein)) = 0;
 
 rect = [1,1,(size(Ein)-1)];
 stopclick = 0;
+pauseval = 0;
 absreal = 'real';
 L = 0;
 while ~isempty(varargin)
@@ -53,8 +54,11 @@ while ~isempty(varargin)
             varargin(1) = [];
 
         case 'PAUSE'
-            stopclick = 1;
-            varargin(1) = [];
+            if varargin{2} == ''
+                stopclick = true;
+            end
+            pauseval = varargin{2};
+            varargin(1:2) = [];
             
         case 'IMCROP'
             rect = varargin{2};
@@ -100,7 +104,7 @@ eval(abs_str1)
 title(['Z = ',num2str(1000*Z(1)),'mm'],'FontSize',16);
 colormap gray; colorbar; axis image;
 drawnow
-pause
+pause(pauseval)
 
 for L=2:numel(Z)
     Eout = propagate(Ein,lambda,Z(L),ps,varargin{:});
@@ -111,7 +115,7 @@ for L=2:numel(Z)
     title(['Z = ',num2str(1000*Z(L)),'mm'],'FontSize',16);
     colormap gray; colorbar; axis image;
     drawnow
-    if stopclick==1
+    if stopclick==true
         pause
     end
     %
