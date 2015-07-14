@@ -5,6 +5,9 @@
 function  imageprop(Ein,lambda,Z,ps,varargin)
 
 % clear all
+framerate = 30;
+movfilename = 'temp';
+fignum = 99;
 % filename={'DH-001','tif'};
 % filename={'Basler_acA2040-25gm__21407047__20141203_142806712_0100','tiff'};
 % background='background.mat'; %comment out if no background file
@@ -44,13 +47,20 @@ absreal = 'real';
 L = 0;
 while ~isempty(varargin)
     switch upper(varargin{1})
-        
+         case 'VIDEO'
+            vidonflag = true;
+            varargin(1) = [];
+            
         case 'ABS'
             absreal = 'abs';
             varargin(1) = [];
             
         case 'REAL'
             absreal = 'real';
+            varargin(1) = [];
+            
+        case 'ANGLE'
+            absreal = 'angle';
             varargin(1) = [];
 
         case 'PAUSE'
@@ -95,6 +105,8 @@ end
 if ~exist('minint','var')
     minint=min(real(Ein(:)));
 end
+mov(length(Z)) = struct('cdata',zeros(512,512,3,'uint8'),'colormap',[]);
+
 Eout = propagate(Ein,lambda,Z(1),ps,varargin{:});
 abs_str1 = ['imagesc(imcrop(',absreal,'(Eout),rect),[minint maxint])'];
 figure(99);
@@ -105,7 +117,12 @@ title(['Z = ',num2str(1000*Z(1)),'mm'],'FontSize',16);
 colormap gray; colorbar; axis image;
 drawnow
 pause(pauseval)
-
+    if vidonflag==true
+%        t = colorbar;
+%        set(get(t,'ylabel'),'string','Z Depth(m)','fontsize',16)
+        handle=figure(99); set(handle, 'Position', [100 100 640 512])
+        mov(:,1) = getframe(fignum) ;
+    end
 for L=2:numel(Z)
     Eout = propagate(Ein,lambda,Z(L),ps,varargin{:});
     figure(99);
@@ -126,7 +143,21 @@ for L=2:numel(Z)
     end
     %}
     %waitbar(loop/c,wb);
+    if vidonflag==true
+%        t = colorbar;
+%        set(get(t,'ylabel'),'string','Z Depth(m)','fontsize',16)
+        mov(:,L) = getframe(fignum) ;
+    end
 end
+
+    writerObj = VideoWriter([movfilename,'_throughfocus_rand',num2str(uint8(rand*100))],'MPEG-4');
+    writerObj.FrameRate = framerate;
+    open(writerObj);
+    writeVideo(writerObj,mov);
+    close(writerObj);
+end
+
+
 % close(wb);
 % toc
 %
