@@ -217,7 +217,7 @@ end
 
 
 % Add some default variables if they don't exist
-rect_xydxdy = [1 1 1800 1800]
+% rect_xydxdy = [1 1 1800 1800]
 if ~exist('rect_xydxdy','var')
     if ~exist('rect','var')
         rect_xydxdy = [1 1 size(background)-1];
