@@ -22,3 +22,19 @@ t = linspace(0,p*pi,n);
 x = m2*t.^sq2.*cos(t);
 y = m2*t.^sq2.*sin(t);
 plot(x,y); hold off
+
+
+%% Make a Square Sprial of Size N x N
+size = 128;
+mask = ones(size);
+
+for L = 1:2:size-1
+    mask(L,1+L:size-L) = 0; % Create top horizontal lines
+    mask(L:1+size-L,L) = 0; % Create left verticle lines
+    mask(L,2+size-L:L) = 0; % Create bottom horizontal lines
+    mask(size-L:L,L) = 0; % Create right verticle lines
+end
+mask = fliplr(rot90(mask,3));
+mask(size/2+1,size/2+1) = 1;
+mask(size/2,size/2) = 0;
+figure;imagesc(mask)
