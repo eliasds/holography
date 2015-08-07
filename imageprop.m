@@ -8,6 +8,7 @@ function  imageprop(Ein,lambda,Z,ps,varargin)
 framerate = 30;
 movfilename = 'temp';
 fignum = 99;
+vidonflag = false;
 % filename={'DH-001','tif'};
 % filename={'Basler_acA2040-25gm__21407047__20141203_142806712_0100','tiff'};
 % background='background.mat'; %comment out if no background file
@@ -150,6 +151,7 @@ for L=2:numel(Z)
     end
 end
 
+if vidonflag==true
     writerObj = VideoWriter([movfilename,'_throughfocus_rand',num2str(uint8(rand*100))],'MPEG-4');
     writerObj.FrameRate = framerate;
     open(writerObj);
