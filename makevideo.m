@@ -134,7 +134,7 @@ if ~exist('trimframes','var')
     numframes = floor((1+lastframe-firstframe)/skipframes);
 end
 
-if ~exist(outputpathstr, 'dir') & ~isempty(outputpathstr)
+if ~exist(['.\', outputpathstr], 'dir') & ~isempty(['.\', outputpathstr])
   mkdir(outputpathstr);
 end
 
