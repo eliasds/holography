@@ -14,8 +14,8 @@ function background = makevideo(inputFileName, varargin)
 
 %% Set Defaults and detect GPU and initial image size
 tic
-saveoff = 0;
-framerate = 20;
+saveoff = false;
+framerate = 15;
 resize = 1;
 background = 1;
 newbackground = 0;
@@ -23,6 +23,8 @@ outputpathstr = 'analysis';
 outputFileName = 'video';
 backgroundFileName = 'background';
 averagebgflag = false;
+usebgflag = false;
+vortflag = false;
 vidtype = 'MPEG-4';
 [pathstr, firstname, ext] = fileparts(inputFileName);
 firstname = strrep(firstname, '*', '');
@@ -69,7 +71,7 @@ while ~isempty(varargin)
             varargin(1:2) = [];
             
         case 'SAVEOFF'
-            saveoff = 1;
+            saveoff = true;
             varargin(1) = [];
             
         case 'TRIMFRAMES'
@@ -110,6 +112,7 @@ while ~isempty(varargin)
             varargin(1:2) = [];
             
         case 'BACKGROUND'
+            usebgflag = true;
             background = varargin{2};
             varnam=who('-file',background);
             background=load(background,varnam{1});
@@ -120,12 +123,17 @@ while ~isempty(varargin)
             averagebgflag = true;
             varargin(1) = [];
             
+        case 'VORTFLAG'
+            vortflag = true;
+            vortloc = varargin{2};
+            varargin(1:2) = [];
+            
         otherwise
             error(['Unexpected option: ' varargin{1}])
     end
 end
 
-
+% Skip some frames
 if ~exist('trimframes','var')
     trimframes = [1 numfiles 1];
     firstframe = trimframes(1);
@@ -138,6 +146,10 @@ if ~exist(['.\', outputpathstr], 'dir') & ~isempty(['.\', outputpathstr])
   mkdir(outputpathstr);
 end
 
+if usebgflag == true && vortflag == true
+    background(vortloc(2):vortloc(2)+vortloc(4),vortloc(1):vortloc(1)+vortloc(3)) = mean(background(:));
+end
+
 % GPU can't be used with stuctures. Otherwise I would use this code:
 % if gpu_num > 0;
 %     vidout=gpuArray(vidout);
@@ -145,8 +157,11 @@ end
 
 
 % Preallocate video array
-vidout(1:numframes) = struct('cdata',zeros(rect(4),rect(3),3,'uint8'),'colormap',[]);
-if saveoff == 0;
+Ein = imcrop(Ein,rect);
+Ein = imresize(Ein,resize);
+[m,n]=size(Ein);
+vidout(1:numframes) = struct('cdata',zeros(n,m,3,'uint8'),'colormap',[]);
+if saveoff == false;
     writerObj = VideoWriter([outputpathstr,'\',outputFileName,'_',...
         num2str(uint8(rand*100))],vidtype);
     writerObj.FrameRate = framerate;
@@ -166,9 +181,6 @@ for loop=1:numframes
     newbackground = newbackground + Ein;
     Ein = imcrop(Ein,rect);
     Ein = imresize(Ein,resize);
-%     Ein = fp_imload(filesort(L, 1).name,'background.mat');
-%     Ein = flipud(fp_imload(filesort(L, 1).name));
-%     Ein = rot90(fp_imload(filesort(L, 1).name)); %also switch (m,n) in vidout
     maxint = 2*mean(Ein(:));
 %     maxint = max(Ein(:));
     Ein(Ein>maxint) = maxint;
@@ -176,10 +188,7 @@ for loop=1:numframes
     
 %     Eout = propagate(Ein,lambda,z,eps,zpad);
     Eout = Ein;
-%     vidout(loop).cdata = uint8(zeros(m,n,3));
     vidout(loop).cdata = uint8(abs(Eout));
-%     vidout(loop).cdata(:,:,1) = uint8(abs(Eout).*128);
-%     vidout(loop).cdata(:,:,1) = uint8(abs(Eout)./256);
     vidout(loop).cdata(:,:,2) = vidout(loop).cdata(:,:,1);
     vidout(loop).cdata(:,:,3) = vidout(loop).cdata(:,:,1);
     writeVideo(writerObj,vidout(loop));
