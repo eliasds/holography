@@ -1,34 +1,44 @@
 %% Get Normalized Image of first Hologram
 
 tic
-undock
+dock
 %% Setup Constants
 %
-ext = '.tif';
-z1 = -3.5E-3;
-z2 =  3.5E-3;
+ext = '.tiff';
+z1 = 1.75E-3;
+z2 =  7.75E-3;
 zstepsize = 5E-6;
 zsteps = 1+(z2-z1)/zstepsize;
 lambda = 632.8E-9;
 refractindex = 1.33;
-ps = 6.5E-6;
+ps = 5.5E-6;
 mag = 4;
-zpad = 100;
+zpad = 200;
+useHOLOnum = 1;
 cropflag = true; bottom = 2048; top = 1;
-useHOLOnum = 2;
 pauseflag = false;
 maskflag = true;
+mask = 1;
+% mask = mask;
 vortflag = true;
+vortloc = NaN;
 createbackgroundflag = true;
-backgroundfilerangeflag = true; backgroundfilerange = [1:2200];
-saveconstantsflag = true;
+backgroundfilerangeflag = false;
+backgroundfilerange = [400:2600];
 iminflag = true;
-bringtomeanflag = true;
+bringtomeanflag = false;
+maskfile = nan;
+
 z0 = 0;
 z3 = 0;
 z4 = 0;
+% derstr = 0;
+% thparam = 0.4;
+% thlevel = 0;
 
 
+% Constants to save
+namesofconstants = {'ext','z0','z1','z2','z3','z4','zsteps','zstepsize','lambda','refractindex','ps','mag','mask','Imin','zmap','HOLO','useHOLOnum','backgroundfilerangeflag','backgroundfilerange','cropflag','bottom','top','zpad','background','maskflag','masktype','maskfile','vortflag','vortloc','bringtomeanflag','rect_xydxdy'};
 
 
 %% Import Hologram
@@ -43,8 +53,20 @@ numfiles = numel(filesort);
 
 HOLO0001 = (imread(filesort(useHOLOnum).name));
 
-rect_xydxdy = ones(1,4); croparea = inf;
-while rect_xydxdy(4) < croparea-1
+rect_xydxdy = [1 1 size(HOLO0001)-1];
+croparea = length(HOLO0001)+1;
+wouldyouliketocrop = true;
+wouldyouliketocropinput = input('Would you like to crop a region of interest? (y/n): ','s');
+switch upper(wouldyouliketocropinput)
+    case 'N'
+        wouldyouliketocrop = false;
+    case 'Y'
+        wouldyouliketocrop = true;
+    otherwise
+        rect_xydxdy = str2num(wouldyouliketocropinput);
+        wouldyouliketocrop = false;
+end
+while wouldyouliketocrop == true && rect_xydxdy(4) < croparea-1
     [~, rect_xydxdy] = imcrop(HOLO0001); rect_xydxdy = ceil(rect_xydxdy)
 
     croparea = input('How big do you want the cropped region (2048 default): ');
@@ -73,8 +95,10 @@ vortflag = input('Is there a Vorticella object? (y/n) ','s');
 switch upper(vortflag)
     case 'Y'
         vortflag = true;
+        figure;
         [~, vortloc] = imcrop(HOLO0001); vortloc = ceil(vortloc);
         vortloc(3:4) = vortloc(3:4) + top - 1;
+%         vortloc = [891 1859 140 124];
         
     case 'N'
         vortflag = false;
@@ -89,44 +113,48 @@ HOLO0001 = double(HOLO0001);
 %% Create Mask
 %
 zpad = 2*zpad + length(HOLO0001);
-maskflag = input('Apply default mask? (y/n) ','s');
+maskflag = input('Apply a Fourier Tansform aperture mask? (y/n) ','s');
 switch upper(maskflag)
     case 'Y'
         maskflag = true;
-        mask = makemask(zpad, 'half');
-        
+        masktype = input('Which mask do you want to use? ("KNIFE", "OPEN", "FILE", "VAR", etc.) ','s');
+        switch upper(masktype)
+            case 'FILE'
+                maskfile = input('File name: ','s');
+                mask = makemask(zpad, masktype, maskfile);
+                
+            case 'VAR'
+                maskfile = input('Local variable name: ','s');
+                mask = makemask(zpad, masktype, eval(maskfile));
+                
+            otherwise
+                mask = makemask(zpad, masktype);
+%                 mask = imresize(mask,[zpad,zpad],'nearest');
+                
+        end
     case 'N'
         maskflag = false;
-        mask = 1;
-        
     otherwise
         error(['Unexpected option: ' maskflag])
 end
 
-
-%% test zmax and zmin
+%% Create Background
 %
-testzmflag = true;
-while testzmflag == true;
-    imageprop(HOLO0001,lambda/refractindex,linspace(z1,z2,1+round((-1+zsteps)/40)),ps/mag,'mask',mask,'zpad',zpad,'real','imcrop',[256 256 1023 1023],'pause',1);
-    imagepropagain = input('Do you want to run the video again? (y/n): ','s');
-    switch upper(imagepropagain)
+
+if createbackgroundflag == true && exist('.\background.mat', 'file') > 0
+    overwritebackground = input('Are you sure you want to overwrite background.mat? (y/n) ','s');
+    switch upper(overwritebackground)
         case 'Y'
-            testzmflag = true;
-            z1 = input(['New z1(',num2str(z1),'): ']);
-            z2 = input(['New z2(',num2str(z2),'): ']);
-            zsteps = 1+(z2-z1)/zstepsize;
+            createbackgroundflag = true;
+
         case 'N'
-            testzmflag = false;
+            createbackgroundflag = false;
+
         otherwise
-            error(['Unexpected option: ' testzmflag])
+            error(['Unexpected option: ' vortflag])
     end
 end
 
-
-
-%% Create Background
-%
 if createbackgroundflag == true;
 
     if backgroundfilerangeflag == true
@@ -141,16 +169,13 @@ if createbackgroundflag == true;
 
 else
     
-    load('background.mat');
-    
+    load('background.mat');    
 end
 
 background = imcrop(background,rect_xydxdy);
 
 HOLO0001 = HOLO0001./background;
-% if cropflag == true
-%     HOLO0001 = imcrop(HOLO0001,[top,top,bottom-top,bottom-top]);
-% end
+
 HOLO0001nozeros = HOLO0001; HOLO0001nozeros(HOLO0001nozeros==0)=NaN;
 
 if bringtomeanflag == true
@@ -160,6 +185,51 @@ else
     HOLO0001(HOLO0001 > 2*nanmean(HOLO0001nozeros(:))) = 2*nanmean(HOLO0001nozeros(:));
     HOLO0001(isnan(HOLO0001)) = 0;
 end
+
+
+
+%% test zmax and zmin
+%
+testzmflag = true;
+bigzsteps = 1+round((-1+zsteps)/40);
+if bigzsteps < 15
+    bigzsteps = 30;
+end
+
+imagepropagain = input('Do you want to step through z? (y/n): ','s');
+switch upper(imagepropagain)
+    case 'N'
+        testzmflag = false;
+end
+    
+while testzmflag == true;
+    figure(7312)
+    imageprop(HOLO0001,lambda/refractindex,linspace(z1,z2,bigzsteps),ps/mag,'mask',mask,'zpad',zpad,'real','imcrop',[256 256 1023 1023],'pause',1);
+    imagepropagain = input('Do you want to run the video again? (y/n): ','s');
+    switch upper(imagepropagain)
+        case 'Y'
+            testzmflag = true;
+            lastz1 = z1;
+            lastz2 = z2;
+            z1 = input(['New z1(',num2str(lastz1),'): ']);
+            z2 = input(['New z2(',num2str(lastz2),'): ']);
+            if isempty(z1);
+                z1 = lastz1;
+            end
+            if isempty(z2);
+                z2 = lastz2;
+            end
+            zsteps = 1+(z2-z1)/zstepsize;
+        case 'N'
+            testzmflag = false;
+        otherwise
+            error(['Unexpected option: ' testzmflag])
+    end
+end
+
+% if cropflag == true
+%     HOLO0001 = imcrop(HOLO0001,[top,top,bottom-top,bottom-top]);
+% end
 
 %% Plot and Save HOLO
 %
@@ -195,11 +265,8 @@ end
 HOLO = HOLO0001;
 Imin = Imin0001;
 zmap = zmap0001;
-if saveconstantsflag == true;
-    
-    save(['imin',useHOLOnumstr,'constants.mat'],'ext','z0','z1','z2','z3','z4','zsteps','zstepsize','lambda','refractindex','ps','mag','mask','Imin','zmap','HOLO','useHOLOnum','backgroundfilerangeflag','backgroundfilerange','cropflag','bottom','top','zpad','background','maskflag','vortflag','vortloc','bringtomeanflag','rect_xydxdy');
+save(['imin',useHOLOnumstr,'constants.mat'],namesofconstants{:});
 
-end
 
 %% Plot and Save Imin
 %
@@ -214,3 +281,4 @@ imwrite(uint8(Imin0001norm*255), ['Imin',useHOLOnumstr,'.png']);
 %%
 %
 toc
+dock
