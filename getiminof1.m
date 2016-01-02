@@ -5,8 +5,8 @@ dock
 %% Setup Constants
 %
 ext = '.tiff';
-z1 = 1.75E-3;
-z2 =  7.75E-3;
+z1 = 3.5E-3;
+z2 =  9.2E-3;
 zstepsize = 5E-6;
 zsteps = 1+(z2-z1)/zstepsize;
 lambda = 632.8E-9;
@@ -14,7 +14,7 @@ refractindex = 1.33;
 ps = 5.5E-6;
 mag = 4;
 zpad = 200;
-useHOLOnum = 1;
+useHOLOnum = 251;
 cropflag = true; bottom = 2048; top = 1;
 pauseflag = false;
 maskflag = true;
@@ -23,8 +23,8 @@ mask = 1;
 vortflag = true;
 vortloc = NaN;
 createbackgroundflag = true;
-backgroundfilerangeflag = false;
-backgroundfilerange = [400:2600];
+backgroundfilerangeflag = true;
+backgroundfilerange = [1:501];
 iminflag = true;
 bringtomeanflag = false;
 maskfile = nan;
@@ -70,6 +70,9 @@ while wouldyouliketocrop == true && rect_xydxdy(4) < croparea-1
     [~, rect_xydxdy] = imcrop(HOLO0001); rect_xydxdy = ceil(rect_xydxdy)
 
     croparea = input('How big do you want the cropped region (2048 default): ');
+    if isempty(croparea);
+        croparea = 2048;
+    end
     toporbottom = input('Do you want to keep top or bottom? ','s');
      switch upper(toporbottom)
           
@@ -112,6 +115,7 @@ HOLO0001 = double(HOLO0001);
 
 %% Create Mask
 %
+masktype = 'OPEN'; %default value - open means there is no mask.
 zpad = 2*zpad + length(HOLO0001);
 maskflag = input('Apply a Fourier Tansform aperture mask? (y/n) ','s');
 switch upper(maskflag)
@@ -127,6 +131,10 @@ switch upper(maskflag)
                 maskfile = input('Local variable name: ','s');
                 mask = makemask(zpad, masktype, eval(maskfile));
                 
+            case 'OPEN'
+                mask = 1;
+                varargin(1:2) = [];
+                
             otherwise
                 mask = makemask(zpad, masktype);
 %                 mask = imresize(mask,[zpad,zpad],'nearest');
@@ -141,8 +149,8 @@ end
 %% Create Background
 %
 
-if createbackgroundflag == true && exist('.\background.mat', 'file') > 0
-    overwritebackground = input('Are you sure you want to overwrite background.mat? (y/n) ','s');
+if createbackgroundflag == true && backgroundfilerangeflag == false && exist('.\background.mat', 'file') > 0
+    overwritebackground = input('"background.mat" already exists. Are you sure you want to overwrite it? (y/n) ','s');
     switch upper(overwritebackground)
         case 'Y'
             createbackgroundflag = true;
