@@ -20,9 +20,19 @@ thIteration = 1;
 
 %%
 %
+loop = 0;
 dervector = cell(1,length(derstr));
 for L = 1:length(derstr)
-    dervector{L} = derstr(L);
+    loop = loop + 1;
+    dervector{loop} = derstr(L);
+    if ismember(dervector{loop}, '0123456789')
+        dervector{loop} = str2double(dervector{loop});
+        if isnumeric(dervector{loop-1})
+            dervector{loop-1} = 10*dervector{loop-1} + dervector{loop};
+            dervector(loop) = [];
+            loop = loop - 1;
+        end
+    end
 end
 
 while ~isempty(dervector)
@@ -30,7 +40,7 @@ while ~isempty(dervector)
         
         case 'D'
             thIteration = thIteration + 1;
-            disknum = str2double(dervector{2});
+            disknum = dervector{2};
             diskshape = morphshape(disknum);
             th = imdilate(th,diskshape);
             eval(['th',num2str(thIteration),' = th;']);
@@ -38,7 +48,7 @@ while ~isempty(dervector)
             
         case 'E'
             thIteration = thIteration + 1;
-            disknum = str2double(dervector{2});
+            disknum = dervector{2};
             diskshape = morphshape(disknum);
             th = imerode(th,diskshape);
             eval(['th',num2str(thIteration),' = th;']);
@@ -46,7 +56,7 @@ while ~isempty(dervector)
             
         case 'R'
             thIteration = thIteration + 1;
-            disknum = str2double(dervector{2});
+            disknum = dervector{2};
             % th = bwareaopen(th, 4);
             % th = bwareaopen(th, 8); %Default
             th = bwareaopen(th,disknum); %Disknum of 8 is default
