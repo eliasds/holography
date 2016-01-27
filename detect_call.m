@@ -13,9 +13,8 @@ thlevel = 0;
 %     thparam = 0.1;
 %     thparam = 0.05;
 %     thparam = 0.01;
-% thparamlist = [.4,.333,.25];
-
-for thparam = [0.01,0.02,0.05,0.1]
+thparamlist = [.4,.333,.25];
+for thparam = thparamlist
 %     newdir = ['th',thlevel]
 %     mkdir(newdir);
 %     thlevel = thlevel + 0.05;
