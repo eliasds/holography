@@ -110,7 +110,7 @@ mov(length(Z)) = struct('cdata',zeros(512,512,3,'uint8'),'colormap',[]);
 
 Eout = propagate(Ein,lambda,Z(1),ps,varargin{:});
 abs_str1 = ['imagesc(imcrop(',absreal,'(Eout),rect),[minint maxint])'];
-% figure(99);
+figure(99);
 eval(abs_str1)
 % imagesc(imcrop(real(Eout),rect),[minint maxint^2])
 % imagesc(abs(Eout).^2,[0 maxint^2])
@@ -121,12 +121,12 @@ pause(pauseval)
     if vidonflag==true
 %        t = colorbar;
 %        set(get(t,'ylabel'),'string','Z Depth(m)','fontsize',16)
-%         handle=figure(99); set(handle, 'Position', [100 100 640 512])
+        handle=figure(99); set(handle, 'Position', [100 100 640 512])
         mov(:,1) = getframe(fignum) ;
     end
 for L=2:numel(Z)
     Eout = propagate(Ein,lambda,Z(L),ps,varargin{:});
-%     figure(99);
+    figure(99);
     eval(abs_str1)
 %     imagesc(imcrop(abs(real(Eout)).^2,rect),[minint maxint^2])
 %     imagesc(abs(Eout).^2,[0 maxint^2])
