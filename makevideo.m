@@ -25,6 +25,7 @@ backgroundFileName = 'background';
 averagebgflag = false;
 usebgflag = false;
 vortflag = false;
+fftflag = false;
 vidtype = 'MPEG-4';
 [pathstr, firstname, ext] = fileparts(inputFileName);
 firstname = strrep(firstname, '*', '');
@@ -128,12 +129,17 @@ while ~isempty(varargin)
             vortloc = varargin{2};
             varargin(1:2) = [];
             
+        case 'ROLLINGBACKGROUND'
+        case 'FFT'
+            fftflag = true;
+            varargin(1) = [];
+            
         otherwise
             error(['Unexpected option: ' varargin{1}])
     end
 end
 
-% Skip some frames
+% Do NOT skip frames (unless you want to)
 if ~exist('trimframes','var')
     trimframes = [1 numfiles 1];
     firstframe = trimframes(1);
@@ -180,14 +186,28 @@ for loop=1:numframes
     end
     newbackground = newbackground + Ein;
     Ein = imcrop(Ein,rect);
+    if fftflag == true
+        EinFFT = log10(abs(fftshift(fft2(Ein))));
+        minFFTlog = min(EinFFT(:))+2;
+        maxFFTlog = max(EinFFT(:))-1;
+        EinFFT(EinFFT>maxFFTlog) = maxFFTlog;
+        EinFFT(EinFFT<minFFTlog) = minFFTlog;
+        EinFFT = imresize(Ein,resize);
+        EinFFT = 255*(EinFFT - minFFTlog)/(maxFFTlog-minFFTlog);
+    end
     Ein = imresize(Ein,resize);
+    
     maxint = 2*mean(Ein(:));
 %     maxint = max(Ein(:));
     Ein(Ein>maxint) = maxint;
     Ein = 255.*Ein./maxint;
     
 %     Eout = propagate(Ein,lambda,z,eps,zpad);
-    Eout = Ein;
+    if fftflag == true
+        Eout = cat(2,Ein,EinFFT);
+    else
+        Eout = Ein;
+    end
     vidout(loop).cdata = uint8(abs(Eout));
     vidout(loop).cdata(:,:,2) = vidout(loop).cdata(:,:,1);
     vidout(loop).cdata(:,:,3) = vidout(loop).cdata(:,:,1);
