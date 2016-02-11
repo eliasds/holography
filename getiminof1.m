@@ -5,8 +5,8 @@ dock
 %% Setup Constants
 %
 ext = '.tiff';
-z1 = 3.5E-3;
-z2 =  9.2E-3;
+z1 = -3E-3;
+z2 =  4E-3;
 zstepsize = 5E-6;
 zsteps = 1+(z2-z1)/zstepsize;
 lambda = 632.8E-9;
@@ -14,7 +14,7 @@ refractindex = 1.33;
 ps = 5.5E-6;
 mag = 4;
 zpad = 200;
-useHOLOnum = 251;
+useHOLOnum = 201;
 cropflag = true; bottom = 2048; top = 1;
 pauseflag = false;
 maskflag = true;
@@ -22,9 +22,10 @@ mask = 1;
 % mask = mask;
 vortflag = true;
 vortloc = NaN;
+vortimg = NaN;
 createbackgroundflag = true;
 backgroundfilerangeflag = true;
-backgroundfilerange = [1:501];
+backgroundfilerange = [101:301];
 iminflag = true;
 bringtomeanflag = false;
 maskfile = nan;
@@ -38,7 +39,7 @@ z4 = 0;
 
 
 % Constants to save
-namesofconstants = {'ext','z0','z1','z2','z3','z4','zsteps','zstepsize','lambda','refractindex','ps','mag','mask','Imin','zmap','HOLO','useHOLOnum','backgroundfilerangeflag','backgroundfilerange','cropflag','bottom','top','zpad','background','maskflag','masktype','maskfile','vortflag','vortloc','bringtomeanflag','rect_xydxdy'};
+namesofconstants = {'ext','z0','z1','z2','z3','z4','zsteps','zstepsize','lambda','refractindex','ps','mag','mask','Imin','zmap','HOLO','useHOLOnum','backgroundfilerangeflag','backgroundfilerange','cropflag','bottom','top','zpad','background','maskflag','masktype','maskfile','vortflag','vortloc','vortimg','bringtomeanflag','rect_xydxdy'};
 
 
 %% Import Hologram
@@ -99,9 +100,11 @@ switch upper(vortflag)
     case 'Y'
         vortflag = true;
         figure;
-        [~, vortloc] = imcrop(HOLO0001); vortloc = ceil(vortloc);
-        vortloc(3:4) = vortloc(3:4) + top - 1;
-%         vortloc = [891 1859 140 124];
+        [~, vortloc] = imcrop(HOLO0001);
+        vortloc = ceil(vortloc);
+        vortlocRel = vortloc;
+        vortimg = double(HOLO0001(vortlocRel(2):vortlocRel(2)+vortlocRel(4)-1,vortlocRel(1):vortlocRel(1)+vortlocRel(3)-1));
+        vortloc(1:2) = vortloc(1:2) + top - 1;
         
     case 'N'
         vortflag = false;
@@ -181,8 +184,10 @@ else
 end
 
 background = imcrop(background,rect_xydxdy);
-
+vortimg = vortimg/mean(background(:));
 HOLO0001 = HOLO0001./background;
+HOLO0001(vortlocRel(2):vortlocRel(2)+vortlocRel(4)-1,vortlocRel(1):vortlocRel(1)+vortlocRel(3)-1) = mean(background(:));
+
 
 HOLO0001nozeros = HOLO0001; HOLO0001nozeros(HOLO0001nozeros==0)=NaN;
 
@@ -273,7 +278,7 @@ end
 HOLO = HOLO0001;
 Imin = Imin0001;
 zmap = zmap0001;
-save(['imin',useHOLOnumstr,'constants.mat'],namesofconstants{:});
+save(['iminSingle',useHOLOnumstr,'constants.mat'],namesofconstants{:});
 
 
 %% Plot and Save Imin
