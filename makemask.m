@@ -70,8 +70,10 @@ while ~isempty(varargin)
             mask(north,west) = 0;
             varargin(1) = [];
             
-        case {'FILE', 'SPIRAL'}
-            mask = load1(varargin{2});
+        case {'FILE', 'SPIRAL'};
+            varnam = who('-file',varargin{2});
+            mask = load(varargin{2},varnam{1});
+            mask = mask.(varnam{1});
             mask = imresize(mask,[resizeVal,resizeVal],'nearest','colormap','original');
             varargin(1:2) = [];
             
