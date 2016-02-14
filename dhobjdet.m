@@ -1,4 +1,4 @@
-function [Imin,zmap,constants,xyzLocCentroid,th,Xauto_min,Yauto_min,Zauto_min,Ein,background,threshmov] = detect(varargin)
+function [Imin,zmap,constants,xyzLocCentroid,particlefilename,th,Xauto_min,Yauto_min,Zauto_min,Ein,background,threshmov] = imindetect(varargin)
 %% Detect - Find the minimum intensity of all images in folder, detect
 %           particle locations, and saves all.
 %           
@@ -16,24 +16,6 @@ function [Imin,zmap,constants,xyzLocCentroid,th,Xauto_min,Yauto_min,Zauto_min,Ei
 %       (incomplete)**Remove problematic regions (like vorticella)**
 %       detect particle centers in Imin, use that for Z value, and saves
 
-
-%% Method attempting to show dragable cropbox of 1024 or 2048
-%
-% I = imread('DH_0001.tif');
-% figure
-% imshow(I);
-% waitforbuttonpress
-% point1 = get(gca,'CurrentPoint') % button down detected
-% rect_xydxdy = [point1(1,1) point1(1,2) 50 100];
-% [r2] = dragrect(rect_xydxdy);
-% J = imcrop(I, rect_xydxdy);
-% figure,imshow(J),title('Cropped Image');
-% 
-% figure, imshow('pout.tif');
-% h = imrect;
-% position = wait(h);
-
-
 %% List of Default Constants
 %
 tic
@@ -47,7 +29,8 @@ createIminfilesflag = false;
 runparticledetectionflag = true;
 gpuflag = true;
 particlevideoflag = true;
-earlycropflag = true;
+earlycropflag = false;
+latecropflag = false;
 bringtomeanflag = false;
 detectbestthreshflag = true;
 try
@@ -69,7 +52,7 @@ derstr = 'R8D5E4';
 firstframe = 1;
 lastframe = 'numfiles'; %Default lastframe value
 % lastframe = '250';
-skipframes = 10; % skipframes = 1 is default
+skipframes = 1; % skipframes = 1 is default
 framerate = 20;
 IminPathStr = 'matfiles\';
 OutputPathStr = ['analysis-',datestr(now,'yyyymmdd'),'\'];
@@ -105,6 +88,7 @@ while ~isempty(varargin)
             varargin(1:2) = [];
             
         case 'THLEVEL'
+            detectbestthreshflag = false;
             thlevel = varargin{2};
             varargin(1:2) = [];
             
@@ -123,6 +107,16 @@ while ~isempty(varargin)
             
         case 'EARLYCROP'
             earlycropflag = true;
+            varargin(1:2) = [];
+            
+        case 'LATECROP'
+            latecropflag = true;
+            if numel(varargin{2}) ~= 4
+                rect_xydxdy_copy = [(varargin{2}(1:2)), 1023,1023];
+            else
+                rect_xydxdy_copy = [varargin{2}];
+                rect_xydxdy_copy(3:4)=rect_xydxdy_copy(3:4)-1;
+            end
             varargin(1:2) = [];
             
         case 'CONSTANTS'
@@ -156,6 +150,10 @@ while ~isempty(varargin)
             firstframe = varargin{2};
             varargin(1:2) = [];
             
+        case 'SKIPFRAMES'
+            skipframes = varargin{2};
+            varargin(1:2) = [];
+            
         case 'IMINFLAGON'
             createIminfilesflag = true;
             varargin(1) = [];
@@ -185,6 +183,7 @@ while ~isempty(varargin)
             varargin(1) = [];
             
         case 'THPARAM'
+            detectbestthreshflag = true;
             thparam = varargin{2};
             varargin(1:2) = [];
             
@@ -194,54 +193,14 @@ while ~isempty(varargin)
     end
 end
 
-
-%% Turn off some warning messages:
-%
-% warning('off','images:imfindcircles:warnForLargeRadiusRange');
-% warning('off','images:imfindcircles:warnForSmallRadius');
-
-
 %% Setup secondary constants and variables
 %
 % Constants to save
 namesofconstants = {'lambda','mag','maxint','ps','refractindex','zsteps','zstepsize','thlevel','vortloc','z0','z1','z2','z3','z4','rect_xydxdy','top','bottom','mask','derstr','thparam'};
 
 
-% Import Background file
-varnam = who('-file',backgroundfile);
-background = load(backgroundfile,varnam{1});
-background = background.(varnam{1});
-if gpuflag == true
-    background = gpuArray(background);
-end
 
 
-% Add some default variables if they don't exist
-% rect_xydxdy = [1 1 1800 1800]
-if ~exist('rect_xydxdy','var')
-    if ~exist('rect','var')
-        rect_xydxdy = [1 1 size(background)-1];
-    else
-        eval('rect_xydxdy = rect;'); clear('rect');
-    end
-    top = 1;
-    bottom = length(background);
-end
-if ~exist('zstepsize','var')
-    try
-        zstepsize = stepsize;
-        clear stepsize;
-    catch
-        zstepsize = input('zstepsize not found. What should it be? (5E-6): ','s');
-    end
-end
-if ~exist('zsteps','var')
-    try
-        eval('zsteps = steps;'); clear('steps');
-    catch
-        zsteps = 1 + abs(z1-z2)/zstepsize;
-    end
-end
 Z = linspace(z1,z2,zsteps);
 loop = 0;
 
@@ -252,27 +211,31 @@ filesort = dir([filename,'*',ext]);
 numfiles = numel(filesort);
 numframes = floor((eval(lastframe) - firstframe + 1)/skipframes);
 xyzLocCentroid(numframes).time=[];
-% Eout(numfiles).time=[];
 for L = 1:numfiles
     [filesort(L).pathstr, filesort(L).firstname, filesort(L).ext] = ...
         fileparts([filesort(L).name]);
     %filesort(i).matname=strcat(filesort(i).matname,'.mat');
 end
+% Import Hologram file
+HoloFile = [filesort(1, 1).name];
+varnam = who('-file',HoloFile);
+
+% Change Default Crop Parameters
+if latecropflag == true
+    rect_xydxdy = rect_xydxdy_copy;
+end
 
 
 % Determine maximum/mean intensity
 if ~exist('maxint','var')
-    Ein = (double(imread([filesort(1).name]))./background);
-    % Ein = gather((double(imread([filesort(1).name]))));
-    % Ein = gather(double(background));
-    % Ein = gather((double(imread([filesort(1).name]))./double(imread([filesort(skipframes+1).name]))));
+    Ein = load([filesort(L, 1).name],varnam{1});
+    Ein = Ein.(varnam{1});
     if earlycropflag == true
         Ein = imcrop(Ein,[top,top,bottom-top,bottom-top]);
     end
     EinNoZeros = Ein; EinNoZeros(EinNoZeros==0)=NaN;
     maxint=2*nanmean(real(EinNoZeros(:)));
 end
-
 
 % Options for creating Imin files
 if createIminfilesflag == true;
@@ -298,7 +261,6 @@ if runparticledetectionflag == true
 end
 
 
-
 %% Create Imin MAT files and run Particle Detection together
 %
 
@@ -317,7 +279,8 @@ for L=firstframe:skipframes:eval(lastframe)
         %     Holo = background;
         %     background = double(imread([filesort(L+skipframes).name]));
         %     Ein = Holo./background;
-        Ein = (double(imread([filesort(L).name]))./background);
+        Ein = load([filesort(L, 1).name],varnam{1});
+        Ein = Ein.(varnam{1});
         % Ein = imcrop(Ein,rect_xydxdy);
         % Ein=Ein(vortloc(2)-radix2+1:vortloc(2),vortloc(1)-radix2/2:vortloc(1)-1+radix2/2);
         % Ein=Ein(1882-768:1882+255,1353-511:1353+512);
@@ -373,7 +336,7 @@ for L=firstframe:skipframes:eval(lastframe)
             thlevel = bestthresh( Imin, thparam );
         end
         
-        % Secondary crop to remove Fresnel boudary effects
+        % Secondary crop to remove Fresnel boundary effects
         Imin=imcrop(Imin,rect_xydxdy);
         zmap=imcrop(zmap,rect_xydxdy);
 
@@ -383,7 +346,7 @@ for L=firstframe:skipframes:eval(lastframe)
         
         % Add 2D particle threshold video data to struct
         if particlevideoflag==true
-            threshmov(loop).cdata = uint8(th(1:1024,1:1024))*255;
+            threshmov(loop).cdata = uint8(imresize(th,1/4))*255;
             threshmov(loop).cdata(:,:,2) = threshmov(loop).cdata(:,:,1);
             threshmov(loop).cdata(:,:,3) = threshmov(loop).cdata(:,:,1);
         end
@@ -398,7 +361,7 @@ end
 %% Wrap up the analysis
 %
 Ein=gather(Ein);
-background=gather(background);
+% background=gather(background);
 maxint=gather(maxint);
 close(wb);
 % Create struct containing all constants
@@ -430,6 +393,4 @@ end
 
 toc
 end
-
-
 
