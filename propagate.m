@@ -1,5 +1,5 @@
 %% Fresnel Propagation Function for CPU/GPU.
-% Version 5.0
+% Version 5.1
 % The Fresnel appoximation describes how the image from an object gets
 % propagated in real space.
 % This function produces the digital refocusing of a hologram.
@@ -28,8 +28,9 @@
 function [Eout,H] = propagate(Ein,lambda,Z,ps,varargin)
 
 % Set Defaults and detect GPU and initial image size
-[m,n]=size(Ein);  M=m;  N=n;
-mask=1; %Default Aperture Mask function
+[m,n] = size(Ein);  M = m;  N = n;
+mask = 1; %Default Aperture Mask function
+tfc = ones(size(Z));
 try
     gpu_num = gpuDeviceCount; %Determines if there is a CUDA enabled GPU
 catch err
@@ -76,6 +77,11 @@ while ~isempty(varargin)
             mask = varargin{2};
             varargin(1:2) = [];
             
+        case 'TFC' % Adds The Correct Transfer Function Coefficient (slower)
+            % Default Behavoir leaves this as unity
+            tfc = exp(1i*(2*pi/lambda)*Z);
+            varargin(1) = [];
+            
         otherwise
             error(['Unexpected option: ' varargin{1}])
     end
@@ -118,9 +124,8 @@ Ein_pad(1+(M-m)/2:(M+m)/2,1+(N-n)/2:(N+n)/2)=Ein;
 % FFT of E0
 E0fft = fftshift(fft2(Ein_pad));
 for z = 1:length(Z)
-    %h(:,:,z) = exp(1i*k*z)*exp(1i*k*(x.^2+y.^2)/(2*z))/(1i*lambda*z); %Fresnel kernel
-    %H  = exp(1i*k*Z(z))*exp(-1i*pi*lambda*Z(z)*(fx2fy2)); %Correct Transfer Function
-    H  = exp(-1i*pi*lambda*Z(z)*fx2fy2); %Fast Transfer Function
+    %h(:,:,z) = exp(1i*(2*pi/lambda)*z)*exp(1i*(2*pi/lambda)*(x.^2+y.^2)/(2*z))/(1i*lambda*z); %Fresnel kernel
+    H  = tfc(z)*exp(-1i*pi*lambda*Z(z)*fx2fy2); %Fast Transfer Function
     Eout_pad=ifft2(ifftshift(E0fft.*H.*mask));
 
     Eout(:,:,z)=Eout_pad(1+(M-m)/2:(M+m)/2,1+(N-n)/2:(N+n)/2);
