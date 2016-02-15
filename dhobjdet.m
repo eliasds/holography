@@ -360,7 +360,7 @@ end
 
 %% Wrap up the analysis
 %
-Ein=gather(Ein);
+% Ein=gather(Ein);
 % background=gather(background);
 maxint=gather(maxint);
 close(wb);
