@@ -12,7 +12,7 @@ blink_keep = 5;
 tic
 xyzLocCentroidScaled = xyzLocCentroid;
 for i = 1:length(xyzLocCentroidScaled)
-    xyzLocCentroidScaled(i).time(:,3) = xyzLocCentroidScaled(i).time(:,3)/(ps/mag);
+    xyzLocCentroidScaled(i).time(:,3) = xyzLocCentroidScaled(i).time(:,3)/(ps);
 end
 
 %Initialize struct array, with all particles in frame 1 + 2
