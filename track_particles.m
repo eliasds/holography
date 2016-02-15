@@ -1,4 +1,6 @@
-% Particle tracking
+% Particle tracking by Dan Shuldman and Camille Jeannette Mei Biscarrat
+% Version 2.0
+
 % Struct array "particles" contains all the particles with field "pos" + "match" 
     % pos : x, y, z
     % match : 1/0
