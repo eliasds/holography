@@ -196,7 +196,7 @@ end
 %% Setup secondary constants and variables
 %
 % Constants to save
-namesofconstants = {'lambda','mag','maxint','ps','refractindex','zsteps','zstepsize','thlevel','vortloc','z0','z1','z2','z3','z4','rect_xydxdy','top','bottom','mask','derstr','thparam'};
+namesofconstants = {'xyzLocCentroid','lambda','mag','maxint','ps','refractindex','zsteps','zstepsize','thlevel','vortloc','z0','z1','z2','z3','z4','rect_xydxdy','top','bottom','mask','derstr','thparam'};
 
 
 
@@ -375,8 +375,8 @@ daytimenow = datestr(now,'yyyymmddHHMMSS');
 particlefilename = [OutputPathStr,filename(1:end-1),'-th',strrep(num2str(thlevel/10,'%1.1E'),'.',''),'_derstr',derstr,'_day',daytimenow];
 % Save particle position data
 if runparticledetectionflag == true;
-    save([particlefilename,'.mat'], 'xyzLocCentroid')
-    save([particlefilename,'constants.mat'],namesofconstants{:});
+    save([particlefilename,'.mat'],namesofconstants{:})
+%     save([particlefilename,'constants.mat'],namesofconstants{:});
     
     % Save 2D particle threshold video
     if particlevideoflag==true
