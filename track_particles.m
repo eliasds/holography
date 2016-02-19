@@ -1,52 +1,61 @@
 % Particle tracking by Dan Shuldman and Camille Jeannette Mei Biscarrat
-% Version 2.0
+% Version 2.1
 
 % Struct array "particles" contains all the particles with field "pos" + "match" 
     % pos : x, y, z
     % match : 1/0
     
-dist_thresh = 15;
-appear_thresh = 10;
-blink_keep = 5;
+dist_thresh = 8;   % diameter (in pixels) in which to search for particle in next frame
+appear_thresh = 10; % remove particles that apear for less than this number of frames
+blink_keep = 5;     % number of frames to search for missing/blinking particle
 
 tic
-xyzLocCentroidScaled = xyzLocCentroid;
-for i = 1:length(xyzLocCentroidScaled)
-    xyzLocCentroidScaled(i).time(:,3) = xyzLocCentroidScaled(i).time(:,3)/(ps);
+scale = ps/mag;
+multiWaitbar('closeall');
+clear xyzLocTracked
+try
+    xyzLocScaled = xyzLoc;
+catch
+    xyzLocScaled = xyzLocCentroid;
+end
+
+for i = 1:length(xyzLocScaled)
+    xyzLocScaled(i).time(:,3) = xyzLocScaled(i).time(:,3)/(scale);
 end
 
 %Initialize struct array, with all particles in frame 1 + 2
 particles = struct([]);
-init = xyzLocCentroidScaled(1).time;  
+init = xyzLocScaled(1).time;  
 for i = 1:size(init,1)
     particles(i).pos(1,:) = init(i,:);
     particles(i).match(1,1) = 0;
 end
 
 %Go through each frame, tracking particles
-multiWaitbar('Tracking Particles A...',0);
-for L = 2:length(xyzLocCentroidScaled)
-    mat1 = xyzLocCentroidScaled(L-1).time;
-    mat2 = xyzLocCentroidScaled(L).time;
+multiWaitbar('Tracking Particles...',0);
+for L = 2:length(xyzLocScaled)
+    mat1 = xyzLocScaled(L-1).time;
+    mat2 = xyzLocScaled(L).time;
     [m,~] = size(mat1);
     [n,~] = size(mat2);
     
-    %Creates dist matrix between every particle in frame L and L + 1
+    %Creates distance matrix between every particle in frame L and L + 1
     dist_mat = nan(m,n);
-    multiWaitbar('Tracking Particles B...',0);
+%     multiWaitbar('Creating Distance Matrix Between Frames Adjacent Frames...',0);
     for M = 1:m
         for N = 1:n
             dist_mat(M,N) = sqrt((mat1(M,1)-mat2(N,1))^2 + ...
                 (mat1(M,2)-mat2(N,2))^2 + (mat1(M,3)-mat2(N,3))^2);
         end
-        multiWaitbar('Tracking Particles B...',M/m);
+%         multiWaitbar('Creating Distance Matrix Between Frames Adjacent Frames...',M/m);
     end
     
     %Thresholds + finds match
     dist_mat_logic = dist_mat < dist_thresh;
     
-    %Copies pos for next blink_keep frames  
-    multiWaitbar('Tracking Particles C...',0);
+    %Copies particle positions for the next #(blink_keep) frames
+    %(there is room here for speed improvements)
+    multiWaitbar('Filling in data for blinking particles...',0);
     for j = 1:length(particles)
         repeat = 0;
         for i = 1:blink_keep
@@ -62,14 +71,14 @@ for L = 2:length(xyzLocCentroidScaled)
             particles(j).match(L,1) = 0;
             particles(j).pos(L,:) = particles(j).pos(L-1,:);
         end
-        multiWaitbar('Tracking Particles C...',j/length(particles));
+        multiWaitbar('Filling in data for blinking particles...',j/length(particles));
     end
     
-    
+    %What does this loop do? Creates a new distance matrix including blinking particles?
     partLength = length(particles);
     dist = zeros(n, partLength);
     keep = ones(partLength,1);
-    multiWaitbar('Tracking Particles D...',0);
+    multiWaitbar('Creating NEW Distance Matrix Between Adjacent Frames...',0);
     for j = 1:partLength
         for i = 1:n
             dist(i,j) = sqrt((particles(j).pos(L-1,1)-mat2(i,1))^2 + ...
@@ -81,14 +90,13 @@ for L = 2:length(xyzLocCentroidScaled)
                 keep(j,1) = keep(j,1) + 1;
             end
         end
-        multiWaitbar('Tracking Particles D...',j/partLength);
+        multiWaitbar('Creating NEW Distance Matrix Between Adjacent Frames...',j/partLength);
     end
             
     
-    %Append matches in L+1 to corresponding particles or adds them as new
-    %particles
+    %Append matches in L+1 to corresponding particles or adds them as new particles
     partLength = length(particles);
-    multiWaitbar('Tracking Particles E...',0);
+%     multiWaitbar('Match Particles from Previous Frame...',0);
     for i = 1:n
         isInMatch = 0;  
         index = find(dist_mat_logic(:,i));
@@ -109,8 +117,7 @@ for L = 2:length(xyzLocCentroidScaled)
             end
                 
             %If match, record index of particle in particles
-            if (~isempty(index) && isequal(mat1(index(minInd),:), ...
-                    particles(j).pos(L-1,:))) || keepMatch
+            if keepMatch || (~isempty(index) && isequal(mat1(index(minInd),:), particles(j).pos(L-1,:)))
                 isInMatch = 1; 
                 ind = j;
                 break
@@ -125,17 +132,16 @@ for L = 2:length(xyzLocCentroidScaled)
             particles(end).match(1:L,1) = zeros(L,1);
             particles(end).pos(L,:) = mat2(i,:);
         end
-        multiWaitbar('Tracking Particles E...',i/n);
+%         multiWaitbar('Match Particles from Previous Frame...',i/n);
     end
-    multiWaitbar('Tracking Particles A...',L/length(xyzLocCentroidScaled));
+    multiWaitbar('Tracking Particles...',L/length(xyzLocScaled));
 
 end
-
-multiWaitbar('closeall');
 
 partLength = length(particles); 
 
 %Remove particles that appear less than appear_thresh
+multiWaitbar('Removing Neglegible Particles and Correcting Data for Blinking Particles...',0);
 index = 1; 
 for i = 1:partLength
     if sum(particles(index).match) <= appear_thresh
@@ -155,29 +161,35 @@ for i = 1:partLength
         end
         index = index + 1;
     end
+    multiWaitbar('Removing Neglegible Particles and Correcting Data for Blinking Particles...',i/partLength);
 end
 
 
 
 %Store particles as fn of time (to plot)
-for L = 1:length(xyzLocCentroidScaled)    
+numofframes = length(xyzLocScaled);
+multiWaitbar('Reformatting Particle Data...',0);
+for L = 1:numofframes
     index = 1;
     xyzLocTracked(L).time = []; 
     for i = 1:length(particles)
-        if ~isempty(particles(i).pos) &&~isnan(particles(i).pos(L,1))
+        if ~isempty(particles(i).pos) && ~isnan(particles(i).pos(L,1))
             xyzLocTracked(L).time(index,1:3) = round(particles(i).pos(L,1:3));
-            xyzLocTracked(L).time(index,3) = xyzLocTracked(L).time(index,3)*ps;
+            xyzLocTracked(L).time(index,3) = xyzLocTracked(L).time(index,3)*scale;
             xyzLocTracked(L).time(index,4) = i;
             index = index + 1;
         end
     end
+    multiWaitbar('Reformatting Particle Data...',L/numofframes);
 end
+
+multiWaitbar('closeall');
 
 if ~exist('particlefilename','var')
     particlefilename = 'temp';
     warning('File name not specified. Saving to temp_Tracked.mat');
 end
     
-save([particlefilename,'_Tracked.mat'], 'xyzLocTracked')
+save([particlefilename,'_Tracked_DT',num2str(dist_thresh),'AT',num2str(appear_thresh),'BK',num2str(blink_keep),'.mat'], 'xyzLocTracked')
 
 toc
