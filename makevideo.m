@@ -188,12 +188,11 @@ for loop=1:numframes
     Ein = imcrop(Ein,rect);
     if fftflag == true
         EinFFT = log10(abs(fftshift(fft2(Ein))));
-        minFFTlog = min(EinFFT(:))+2;
-        maxFFTlog = max(EinFFT(:))-1;
-        EinFFT(EinFFT>maxFFTlog) = maxFFTlog;
-        EinFFT(EinFFT<minFFTlog) = minFFTlog;
-        EinFFT = imresize(Ein,resize);
-        EinFFT = 255*(EinFFT - minFFTlog)/(maxFFTlog-minFFTlog);
+        minFFTlog = min(EinFFT(:));
+        maxFFTlog = max(EinFFT(:));
+        EinFFT = (EinFFT - minFFTlog)/(maxFFTlog - minFFTlog);
+        EinFFT = 255*adapthisteq(EinFFT);
+        EinFFT = imresize(EinFFT,resize);
     end
     Ein = imresize(Ein,resize);
     
