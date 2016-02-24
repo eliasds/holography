@@ -5,8 +5,8 @@ dock
 %% Setup Constants
 %
 ext = '.tiff';
-z1 = -3E-3;
-z2 =  4E-3;
+z1 = -2E-3;
+z2 =  3.2E-3;
 zstepsize = 5E-6;
 zsteps = 1+(z2-z1)/zstepsize;
 lambda = 632.8E-9;
@@ -25,10 +25,11 @@ vortloc = NaN;
 vortimg = NaN;
 createbackgroundflag = true;
 backgroundfilerangeflag = true;
-backgroundfilerange = [101:301];
+backgroundfilerange = [051:351];
 iminflag = true;
 bringtomeanflag = false;
 maskfile = nan;
+fignum = 4321;
 
 z0 = 0;
 z3 = 0;
@@ -63,6 +64,7 @@ switch upper(wouldyouliketocropinput)
         wouldyouliketocrop = false;
     case 'Y'
         wouldyouliketocrop = true;
+        figure(fignum)
     otherwise
         rect_xydxdy = str2num(wouldyouliketocropinput);
         wouldyouliketocrop = false;
@@ -79,13 +81,15 @@ while wouldyouliketocrop == true && rect_xydxdy(4) < croparea-1
           
         case 'BOTTOM'
             top = rect_xydxdy(2)+rect_xydxdy(4)-croparea;
+            left = round((rect_xydxdy(1)+rect_xydxdy(3)/2)-croparea/2);
             bottom = -1+rect_xydxdy(2)+rect_xydxdy(4);
-            rect_xydxdy = [top,top,croparea-1,croparea-1];
+            rect_xydxdy = [left,top,croparea-1,croparea-1];
             
         case 'TOP'
             top = rect_xydxdy(2);
+            left = round((rect_xydxdy(1)+rect_xydxdy(3)/2)-croparea/2);
             bottom = -1+rect_xydxdy(2)+croparea;
-            rect_xydxdy = [top,top,croparea-1,croparea-1];
+            rect_xydxdy = [left,top,croparea-1,croparea-1];
          
         otherwise
             error(['Unexpected option: ' toporbottom])
@@ -180,13 +184,18 @@ if createbackgroundflag == true;
 
 else
     
-    load('background.mat');    
+    load('background.mat');
+%     varnam = who('-file','background.mat');
+%     background = load('background.mat',varnam{1});
+%     background = background.(varnam{1});
 end
 
 background = imcrop(background,rect_xydxdy);
 vortimg = vortimg/mean(background(:));
 HOLO0001 = HOLO0001./background;
-HOLO0001(vortlocRel(2):vortlocRel(2)+vortlocRel(4)-1,vortlocRel(1):vortlocRel(1)+vortlocRel(3)-1) = mean(background(:));
+if vortflag == true;
+    HOLO0001(vortlocRel(2):vortlocRel(2)+vortlocRel(4)-1,vortlocRel(1):vortlocRel(1)+vortlocRel(3)-1) = mean(HOLO0001(:));
+end
 
 
 HOLO0001nozeros = HOLO0001; HOLO0001nozeros(HOLO0001nozeros==0)=NaN;
