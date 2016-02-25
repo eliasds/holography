@@ -26,6 +26,7 @@ averagebgflag = false;
 usebgflag = false;
 vortflag = false;
 fftflag = false;
+skipframesflag = false;
 vidtype = 'MPEG-4';
 [pathstr, firstname, ext] = fileparts(inputFileName);
 firstname = strrep(firstname, '*', '');
@@ -85,6 +86,12 @@ while ~isempty(varargin)
             skipframes = trimframes(3);
             numframes = floor((1+lastframe-firstframe)/skipframes);
             backgroundFileName = ['background',num2str(firstframe),'to',num2str(lastframe),'skip',num2str(skipframes)];
+            varargin(1:2) = [];
+            
+        case 'SKIPFRAMES'
+            skipframesflag = true;
+            skipframesvalue = varargin{2};
+            backgroundFileName = ['background_skip',num2str(skipframesvalue)];
             varargin(1:2) = [];
             
         case 'FPS'
@@ -148,7 +155,12 @@ if ~exist('trimframes','var')
     numframes = floor((1+lastframe-firstframe)/skipframes);
 end
 
-if ~exist(['.\', outputpathstr], 'dir') & ~isempty(['.\', outputpathstr])
+if skipframesflag == true;
+    skipframes = skipframesvalue;
+    numframes = floor((1+lastframe-firstframe)/skipframes);
+end
+
+if ~exist(['.\', outputpathstr], 'dir') && ~isempty(['.\', outputpathstr])
   mkdir(outputpathstr);
 end
 
