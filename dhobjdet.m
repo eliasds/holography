@@ -1,8 +1,10 @@
-function [Imin,zmap,constants,xyzLocCentroid,particlefilename,th,Xauto_min,Yauto_min,Zauto_min,Ein,background,threshmov] = imindetect(varargin)
-%% Detect - Find the minimum intensity of all images in folder, detect
-%           particle locations, and saves all.
+function [Imin,zmap,constants,xyzLoc,particlefilename,th,th_all,Xauto,Yauto,Zauto,Ein,background,threshmov] = dhobjdet(varargin)
+%% dhobjdet - Digital Holography Object Detect:
+%             Find the minimum intensity of all images in folder, detect
+%             particle locations, and saves all.
 %           
-%           Version 2.000
+%             Daniel Shuldman <elias.ds@gmail.com>
+%             Version 2.100
 %
 % Features:
 %   Find Minimum Intensity:
@@ -15,6 +17,31 @@ function [Imin,zmap,constants,xyzLocCentroid,particlefilename,th,Xauto_min,Yauto
 %       Threshhold and morphological operators
 %       (incomplete)**Remove problematic regions (like vorticella)**
 %       detect particle centers in Imin, use that for Z value, and saves
+%
+% Options:
+%         DERSTR
+%         THLEVEL
+%         BACKGROUND
+%         BACKGROUNDFILE
+%         FILENAME
+%         EARLYCROP
+%         LATECROP
+%         CONSTANTS
+%         VIDEO
+%         FPS
+%         LASTFRAME
+%         FIRSTFRAME
+%         SKIPFRAMES
+%         IMINFLAGON
+%         IMINFLAGOFF
+%         DETECTFLAGON
+%         DETECTFLAGOFF
+%         GPUFLAGON
+%         GPUFLAGOFF
+%         BRINGTOMEAN
+%         THPARAM
+%         MINMEAN
+
 
 %% List of Default Constants
 %
@@ -49,12 +76,13 @@ end
 thlevel = 0.2;
 thparam = 0.333;
 derstr = 'R8D5E4';
+minmean = 'MIN';
 firstframe = 1;
-lastframe = 'numfiles'; %Default lastframe value
+lastframenumfiles = true;
 % lastframe = '250';
 skipframes = 1; % skipframes = 1 is default
 framerate = 20;
-IminPathStr = 'matfiles\';
+IminPathStr = 'iminfiles\';
 OutputPathStr = ['analysis-',datestr(now,'yyyymmdd'),'\'];
 % maxint=2; %overide default max intensity: 2*mean(Imin(:))
 % mag = 4; %Magnification
@@ -107,7 +135,7 @@ while ~isempty(varargin)
             
         case 'EARLYCROP'
             earlycropflag = true;
-            varargin(1:2) = [];
+            varargin(1) = [];
             
         case 'LATECROP'
             latecropflag = true;
@@ -143,7 +171,8 @@ while ~isempty(varargin)
             varargin(1:2) = [];
             
         case 'LASTFRAME'
-            lastframe = num2str(varargin{2});
+            lastframenumfiles = false;
+            lastframe = varargin{2};
             varargin(1:2) = [];
             
         case 'FIRSTFRAME'
@@ -187,6 +216,10 @@ while ~isempty(varargin)
             thparam = varargin{2};
             varargin(1:2) = [];
             
+        case 'MINMEAN'
+            minmean = varargin{2};
+            varargin(1:2) = [];
+            
         otherwise
             error(['Unexpected option: ' varargin{1}])
             
@@ -196,7 +229,7 @@ end
 %% Setup secondary constants and variables
 %
 % Constants to save
-namesofconstants = {'xyzLocCentroid','lambda','mag','maxint','ps','refractindex','zsteps','zstepsize','thlevel','vortloc','z0','z1','z2','z3','z4','rect_xydxdy','top','bottom','mask','derstr','thparam'};
+namesofconstants = {'xyzLoc','OutputPathStr','particlefilename','lambda','mag','maxint','ps','refractindex','zsteps','zstepsize','thlevel','vortloc','z0','z1','z2','z3','z4','rect_xydxdy','top','bottom','mask','derstr','thparam','th','th_all','minmean'};
 
 
 
@@ -209,8 +242,11 @@ loop = 0;
 filename = strcat(dirname,filename);
 filesort = dir([filename,'*',ext]);
 numfiles = numel(filesort);
-numframes = floor((eval(lastframe) - firstframe + 1)/skipframes);
-xyzLocCentroid(numframes).time=[];
+if lastframenumfiles == true
+    lastframe = numfiles;
+end
+numframes = floor((lastframe - firstframe + 1)/skipframes);
+xyzLoc(numframes).time=[];
 for L = 1:numfiles
     [filesort(L).pathstr, filesort(L).firstname, filesort(L).ext] = ...
         fileparts([filesort(L).name]);
@@ -243,8 +279,6 @@ if createIminfilesflag == true;
     if ~exist(IminPathStr, 'dir')
       mkdir(IminPathStr);
     end
-    % Save the constants used for current Imin data (with Imin data)
-    save([IminPathStr,'constants.mat'],namesofconstants{:});
 end
 
 
@@ -267,7 +301,7 @@ end
 wb = waitbar(0/numframes,'Analysing Data for Imin and Detecting Particles');
 
 % Main loop
-for L=firstframe:skipframes:eval(lastframe)
+for L=firstframe:skipframes:lastframe
     loop = loop + 1;
     
     
@@ -341,11 +375,11 @@ for L=firstframe:skipframes:eval(lastframe)
         zmap=imcrop(zmap,rect_xydxdy);
 
         % Detect Particles and Save
-        [Xauto_min,Yauto_min,Zauto_min,th,th1,th2,th3] = detection(Imin, zmap, thlevel, derstr);
-        xyzLocCentroid(loop).time=[Xauto_min;Yauto_min;Zauto_min]';
+        [Xauto,Yauto,Zauto,th,th_all] = detection(Imin, zmap, thlevel, derstr, minmean);
+        xyzLoc(loop).time = [Xauto;Yauto;Zauto]';
         
         % Add 2D particle threshold video data to struct
-        if particlevideoflag==true
+        if particlevideoflag == true
             threshmov(loop).cdata = uint8(imresize(th,1/4))*255;
             threshmov(loop).cdata(:,:,2) = threshmov(loop).cdata(:,:,1);
             threshmov(loop).cdata(:,:,3) = threshmov(loop).cdata(:,:,1);
@@ -364,29 +398,30 @@ end
 % background=gather(background);
 maxint=gather(maxint);
 close(wb);
+
+
+% Save constants and particle information
+daytimenow = datestr(now,'yyyymmddHHMMSS');
+particlefilename = [filename(1:end-1),'-th',strrep(num2str(thlevel/10,'%1.1E'),'.',''),'_derstr',derstr,'_day',daytimenow];
 % Create struct containing all constants
 for L = 1:length(namesofconstants)
     constants.(namesofconstants{L}) = eval(namesofconstants{L});
 end
-
-
-% Save particle information
-daytimenow = datestr(now,'yyyymmddHHMMSS');
-particlefilename = [OutputPathStr,filename(1:end-1),'-th',strrep(num2str(thlevel/10,'%1.1E'),'.',''),'_derstr',derstr,'_day',daytimenow];
-% Save particle position data
 if runparticledetectionflag == true;
-    save([particlefilename,'.mat'],namesofconstants{:})
-%     save([particlefilename,'constants.mat'],namesofconstants{:});
+    save([OutputPathStr,particlefilename,'.mat'],namesofconstants{:})
+end
+if createIminfilesflag == true;
+    % Save the constants used for current Imin data (with Imin data)
+    save([IminPathStr,'constants.mat'],namesofconstants{:});
+end
     
-    % Save 2D particle threshold video
-    if particlevideoflag==true
-        writerObj = VideoWriter([particlefilename,'_2DthresholdVideo'],'MPEG-4');
-        writerObj.FrameRate = framerate;
-        open(writerObj);
-        writeVideo(writerObj,threshmov);
-        close(writerObj);
-    end
-
+% Save 2D particle threshold video
+if runparticledetectionflag == true && particlevideoflag == true
+    writerObj = VideoWriter([OutputPathStr,particlefilename,'_2DthresholdVideo'],'MPEG-4');
+    writerObj.FrameRate = framerate;
+    open(writerObj);
+    writeVideo(writerObj,threshmov);
+    close(writerObj);
 end
 
 
