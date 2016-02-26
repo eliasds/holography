@@ -1,6 +1,16 @@
-%% Thresholding and Morphological Operators
+function [Xauto,Yauto,Zauto,th,th_all] = detection(Imin, zmap, thlevel, derstr, minmean);
+%% detection - Particle Detection using Thresholding and Morphological Operators
 %
-function [Xauto_min,Yauto_min,Zauto_min,th,th1,th2,th3,th4,th5,th6,th7,th8,th9] = detection(Imin, zmap, thlevel, derstr);
+%              Daniel Shuldman <elias.ds@gmail.com>
+%              Version 2.1
+%
+%
+%%
+if nargin > 4 && isequal(upper(minmean),'MEAN')
+    meanflag = true;
+else
+    meanflag = false;
+end
 
 %%
 % clear all
@@ -10,11 +20,13 @@ function [Xauto_min,Yauto_min,Zauto_min,th,th1,th2,th3,th4,th5,th6,th7,th8,th9] 
 % derstr = 'R8D5E4D5E4';
 
 %%
-h = 1/9*ones(3);
-zmap = filter2(h,zmap); %Smooth zmap by averaging over all adjacent pixels
-% zmap = filter2(h,filter2(h,zmap));
+if meanflag == false
+    h = 1/9*ones(3);
+    zmap = filter2(h,zmap); %Smooth zmap by averaging over all adjacent pixels
+    zmap = filter2(h,filter2(h,zmap));
+end
 th = Imin<thlevel;
-th1 = th;
+th_all = uint8(th);
 [m,n] = size(Imin);
 thIteration = 1;
 
@@ -39,28 +51,25 @@ while ~isempty(dervector)
     switch upper(dervector{1})
         
         case 'D'
-            thIteration = thIteration + 1;
             disknum = dervector{2};
             diskshape = morphshape(disknum);
             th = imdilate(th,diskshape);
-            eval(['th',num2str(thIteration),' = th;']);
+            thIteration = thIteration + 1; th_all(:,:,thIteration) = th;
             dervector(1:2) = [];
             
         case 'E'
-            thIteration = thIteration + 1;
             disknum = dervector{2};
             diskshape = morphshape(disknum);
             th = imerode(th,diskshape);
-            eval(['th',num2str(thIteration),' = th;']);
+            thIteration = thIteration + 1; th_all(:,:,thIteration) = th;
             dervector(1:2) = [];
             
         case 'R'
-            thIteration = thIteration + 1;
             disknum = dervector{2};
             % th = bwareaopen(th, 4);
             % th = bwareaopen(th, 8); %Default
             th = bwareaopen(th,disknum); %Disknum of 8 is default
-            eval(['th',num2str(thIteration),' = th;']);
+            thIteration = thIteration + 1; th_all(:,:,thIteration) = th;
             dervector(1:2) = [];
             
         otherwise
@@ -83,22 +92,35 @@ end
 % th = imerode(th,strel('disk', dilaterode, 0));
 
 %% Detect Structures
-thIteration = thIteration + 1;
+th = imfill(th,'holes');
+thIteration = thIteration + 1; th_all(:,:,thIteration) = th;
 th = bwlabel(th,4);
-eval(['th',num2str(thIteration),' = th;']);
-autodetstruct = regionprops(th,'Centroid','PixelIdxList','PixelList');
-
-% Determine X,Y,Z-values from minimum intensity pixel
-Xauto_min=zeros(size(autodetstruct))';
-Yauto_min=zeros(size(autodetstruct))';
-Zauto_min=zeros(size(autodetstruct))';
-for i = 1:numel(autodetstruct)
-    idx = autodetstruct(i).PixelIdxList;
-    particlepixels = Imin(idx);
-    [~,minidx] = min(particlepixels);
-    Xauto_min(i) = ceil(idx(minidx)/m);
-    Yauto_min(i) = rem(idx(minidx),m);
-    Zauto_min(i) = zmap(idx(minidx));
+thIteration = thIteration + 1; th_all(:,:,thIteration) = th;
+autodetstruct = regionprops(th,'Centroid','PixelIdxList');
+if meanflag == true; %Determine Z-Values from perimeter means and X & Y-values from centroid
+    th = bwperim(th,4).*th;
+    thIteration = thIteration + 1; th_all(:,:,thIteration) = th;
+    autodetstructp = regionprops(th,'PixelIdxList');
+    xyCentroid = [autodetstruct.Centroid];
+    Xauto = xyCentroid(1:2:end);
+    Yauto = xyCentroid(2:2:end);
+    Zauto = zeros(size(autodetstruct))';
+    for i = 1:numel(autodetstruct)
+        idxp = autodetstructp(i).PixelIdxList;
+        Zauto(i) = mean(zmap(idxp));
+    end
+else % Determine X,Y,Z-values from minimum intensity pixel
+    Xauto = zeros(size(autodetstruct))';
+    Yauto = zeros(size(autodetstruct))';
+    Zauto = zeros(size(autodetstruct))';
+    for i = 1:numel(autodetstruct)
+        idx = autodetstruct(i).PixelIdxList;
+        particlepixels = Imin(idx);
+        [~,minidx] = min(particlepixels);
+        Xauto(i) = ceil(idx(minidx)/m);
+        Yauto(i) = rem(idx(minidx),m);
+        Zauto(i) = zmap(idx(minidx));
+    end
 end
 
 
