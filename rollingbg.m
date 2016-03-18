@@ -82,7 +82,7 @@ for loop = avgNframes+1:numframes
 end
 
 close(wb);
-toc
+toc2
 
 
 end
