@@ -5,16 +5,16 @@ dock
 %% Setup Constants
 %
 ext = '.tiff';
-z1 = -2E-3;
-z2 =  3.2E-3;
+z1 = 2.1E-3;
+z2 =  7.2E-3;
 zstepsize = 5E-6;
 zsteps = 1+(z2-z1)/zstepsize;
 lambda = 632.8E-9;
 refractindex = 1.33;
 ps = 5.5E-6;
 mag = 4;
-zpad = 200;
-useHOLOnum = 201;
+zpad_xy = 200;
+useHOLOnum = 501;
 cropflag = true; bottom = 2048; top = 1;
 pauseflag = false;
 maskflag = true;
@@ -22,10 +22,11 @@ mask = 1;
 % mask = mask;
 vortflag = true;
 vortloc = NaN;
-vortimg = NaN;
+vortimg.img = NaN;
 createbackgroundflag = true;
 backgroundfilerangeflag = true;
-backgroundfilerange = [051:351];
+backgroundfilerange = [350:650];
+propregiontest = [1 1 1023 1023];
 iminflag = true;
 bringtomeanflag = false;
 maskfile = nan;
@@ -40,7 +41,10 @@ z4 = 0;
 
 
 % Constants to save
-namesofconstants = {'ext','z0','z1','z2','z3','z4','zsteps','zstepsize','lambda','refractindex','ps','mag','mask','Imin','zmap','HOLO','useHOLOnum','backgroundfilerangeflag','backgroundfilerange','cropflag','bottom','top','zpad','background','maskflag','masktype','maskfile','vortflag','vortloc','vortimg','bringtomeanflag','rect_xydxdy'};
+namesofconstants = {'earlycropregion','ext','z0','z1','z2','z3','z4','zsteps','zstepsize','lambda','refractindex','ps','mag','mask','Imin','zmap','HOLO','HOLOBGR','useHOLOnum','backgroundfilerangeflag','backgroundfilerange','cropflag','bottom','top','zpad','background','maskflag','masktype','maskfile','vortflag','vortloc','vortimg','bringtomeanflag','rect_xydxdy'};
+[~,nocorder] = sort(lower(namesofconstants));
+namesofconstants = namesofconstants(nocorder);
+    
 
 
 %% Import Hologram
@@ -97,24 +101,32 @@ while wouldyouliketocrop == true && rect_xydxdy(4) < croparea-1
      
 end
 
+earlycropregion = [top,top,bottom-top,bottom-top];
 HOLO0001 = imcrop(HOLO0001,rect_xydxdy);
 
-vortflag = input('Is there a Vorticella object? (y/n) ','s');
-switch upper(vortflag)
-    case 'Y'
-        vortflag = true;
-        figure;
-        [~, vortloc] = imcrop(HOLO0001);
-        vortloc = ceil(vortloc);
-        vortlocRel = vortloc;
-        vortimg = double(HOLO0001(vortlocRel(2):vortlocRel(2)+vortlocRel(4)-1,vortlocRel(1):vortlocRel(1)+vortlocRel(3)-1));
-        vortloc(1:2) = vortloc(1:2) + top - 1;
-        
-    case 'N'
-        vortflag = false;
-        
-    otherwise
-        error(['Unexpected option: ' vortflag])
+vortflag = true;
+vortimg(1).img = [];
+vortidx = 0;
+while vortflag == true;
+    vortidx = vortidx + 1;
+    vortflag = input('Is there a(nother) Vorticella object? (y/n) ','s');
+    switch upper(vortflag)
+        case 'Y'
+            vortflag = true;
+            figure;
+            [~, vortloc(vortidx,1:4)] = imcrop(HOLO0001);
+            vortloc(vortidx,1:4) = ceil(vortloc(vortidx,1:4));
+            vortlocRel(vortidx,1:4) = vortloc(vortidx,1:4);
+            vortimg(vortidx).img = double(HOLO0001(vortlocRel(vortidx,2):vortlocRel(vortidx,2)+vortlocRel(vortidx,4)-1,vortlocRel(vortidx,1):vortlocRel(vortidx,1)+vortlocRel(vortidx,3)-1));
+            vortloc(vortidx,1) = vortloc(vortidx,1) + left - 1;
+            vortloc(vortidx,2) = vortloc(vortidx,2) + top - 1;
+
+        case 'N'
+            vortflag = false;
+
+        otherwise
+            error(['Unexpected option: ' vortflag])
+    end
 end
 
 HOLO0001 = double(HOLO0001);
@@ -123,7 +135,7 @@ HOLO0001 = double(HOLO0001);
 %% Create Mask
 %
 masktype = 'OPEN'; %default value - open means there is no mask.
-zpad = 2*zpad + length(HOLO0001);
+zpad = 2*zpad_xy + length(HOLO0001);
 maskflag = input('Apply a Fourier Tansform aperture mask? (y/n) ','s');
 switch upper(maskflag)
     case 'Y'
@@ -173,28 +185,34 @@ end
 if createbackgroundflag == true;
 
     if backgroundfilerangeflag == true
-
         background=avgbg('filename',['*',ext],'output',['background',num2str(backgroundfilerange(1)),'to',num2str(backgroundfilerange(end))],'filerange',backgroundfilerange);
         
     else
-        
         background=avgbg('filename',['*',ext],'output','background');
-                
+        
     end
+    background = imcrop(background,rect_xydxdy);
 
 else
-    
-    load('background.mat');
+    try
+        load('background.mat');
+        background = imcrop(background,rect_xydxdy);
+    catch
+        background = 1;
+    end
 %     varnam = who('-file','background.mat');
 %     background = load('background.mat',varnam{1});
 %     background = background.(varnam{1});
 end
 
-background = imcrop(background,rect_xydxdy);
-vortimg = vortimg/mean(background(:));
+HOLO0001BG = HOLO0001;
 HOLO0001 = HOLO0001./background;
 if vortflag == true;
-    HOLO0001(vortlocRel(2):vortlocRel(2)+vortlocRel(4)-1,vortlocRel(1):vortlocRel(1)+vortlocRel(3)-1) = mean(HOLO0001(:));
+    [m2,~] = size(vortlocRel);
+    for L2 = 1:m2
+        vortimg(L2).img = vortimg(L2).img/mean(background(:));
+        HOLO0001(vortlocRel(L2,2):vortlocRel(L2,2)+vortlocRel(L2,4)-1,vortlocRel(L2,1):vortlocRel(L2,1)+vortlocRel(L2,3)-1) = mean(HOLO0001(:));
+    end
 end
 
 
@@ -212,6 +230,8 @@ end
 
 %% test zmax and zmin
 %
+% propregiontest = [1 1 size(HOLO0001)-1];
+propcroparea = length(HOLO0001)+1;
 testzmflag = true;
 bigzsteps = 1+round((-1+zsteps)/40);
 if bigzsteps < 15
@@ -220,13 +240,29 @@ end
 
 imagepropagain = input('Do you want to step through z? (y/n): ','s');
 switch upper(imagepropagain)
+    case 'Y'
+        pickpropregion = input('Do you want use default 1024x1024 region? (y/n): ','s');
+        if strcmpi(pickpropregion,'N')
+            while propregiontest(4) < propcroparea-1
+                figure(7312)
+                [~, propregiontest] = imcrop(uint8(HOLO0001)); propregiontest = ceil(propregiontest)
+                propcroparea = input('How big do you want the cropped region (1024 default): ');
+                if isempty(propcroparea);
+                    propcroparea = 1024;
+                end
+                topprop = propregiontest(2)+propregiontest(4)-propcroparea;
+                leftprop = round((propregiontest(1)+propregiontest(3)/2)-propcroparea/2);
+                propregiontest = [leftprop,topprop,propcroparea-1,propcroparea-1];
+            end
+        end
+
     case 'N'
         testzmflag = false;
 end
     
 while testzmflag == true;
     figure(7312)
-    imageprop(HOLO0001,lambda/refractindex,linspace(z1,z2,bigzsteps),ps/mag,'mask',mask,'zpad',zpad,'real','imcrop',[256 256 1023 1023],'pause',1);
+    imageprop(HOLO0001,lambda/refractindex,linspace(z1,z2,bigzsteps),ps/mag,'mask',mask,'zpad',zpad,'real','imcrop',propregiontest,'pause',1);
     imagepropagain = input('Do you want to run the video again? (y/n): ','s');
     switch upper(imagepropagain)
         case 'Y'
@@ -266,9 +302,10 @@ if pauseflag == true;
 end
 
 HOLO0001norm = (HOLO0001 - min(HOLO0001(:)))./(max(HOLO0001(:)) - min(HOLO0001(:)));
+HOLO0001BGnorm = (HOLO0001BG - min(HOLO0001BG(:)))./(max(HOLO0001BG(:)) - min(HOLO0001BG(:)));
 
-imwrite(uint8(HOLO0001norm*255), ['HOLO',useHOLOnumstr,'.png']);
-
+imwrite(uint8(HOLO0001BGnorm*255), ['HOLO',useHOLOnumstr,'.png']);
+imwrite(uint8(HOLO0001norm*255), ['HOLOBGR',useHOLOnumstr,'.png']);
 
 %% Get Imin of Normalized Image of first Hologram
 %
@@ -284,7 +321,8 @@ end
 
 %% Save Constants
 %
-HOLO = HOLO0001;
+HOLO = HOLO0001BG;
+HOLOBGR = HOLO0001;
 Imin = Imin0001;
 zmap = zmap0001;
 save(['iminSingle',useHOLOnumstr,'constants.mat'],namesofconstants{:});
@@ -302,5 +340,6 @@ imwrite(uint8(Imin0001norm*255), ['Imin',useHOLOnumstr,'.png']);
 
 %%
 %
-toc
+toc2
+
 dock
