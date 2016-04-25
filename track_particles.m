@@ -5,12 +5,13 @@
     % pos : x, y, z
     % match : 1/0
     
-dist_thresh = 8;   % diameter (in pixels) in which to search for particle in next frame
-appear_thresh = 10; % remove particles that apear for less than this number of frames
+dist_thresh = 15E-6;   % diameter (in meters) in which to search for particle in next frame
+appear_thresh = 8; % remove particles that apear for less than this number of frames
 blink_keep = 5;     % number of frames to search for missing/blinking particle
+smoothparam = [0.003 0.003 0.0005]; % Spline Smoothing parameter between 0 and 1; Zero being a straight line.
 
 tic
-scale = ps/mag;
+scale = 15; %weights z axis less than x and y when looking for nearest neighbor
 multiWaitbar('closeall');
 clear xyzLocTracked
 try
@@ -20,6 +21,7 @@ catch
 end
 
 for i = 1:length(xyzLocScaled)
+%     xyzLocScaled(i).time(:,1:3) = xyzLocScaled(i).time(:,1:3)/(scale);
     xyzLocScaled(i).time(:,3) = xyzLocScaled(i).time(:,3)/(scale);
 end
 
@@ -144,7 +146,7 @@ partLength = length(particles);
 multiWaitbar('Removing Neglegible Particles and Correcting Data for Blinking Particles...',0);
 index = 1; 
 for i = 1:partLength
-    if sum(particles(index).match) <= appear_thresh
+    if sum(particles(index).match) < appear_thresh
         particles(index) = [];
     else
         %fills missing particles with linear approx
@@ -174,7 +176,7 @@ for L = 1:numofframes
     xyzLocTracked(L).time = []; 
     for i = 1:length(particles)
         if ~isempty(particles(i).pos) && ~isnan(particles(i).pos(L,1))
-            xyzLocTracked(L).time(index,1:3) = round(particles(i).pos(L,1:3));
+            xyzLocTracked(L).time(index,1:3) = particles(i).pos(L,1:3);
             xyzLocTracked(L).time(index,3) = xyzLocTracked(L).time(index,3)*scale;
             xyzLocTracked(L).time(index,4) = i;
             index = index + 1;
@@ -183,6 +185,12 @@ for L = 1:numofframes
     multiWaitbar('Reformatting Particle Data...',L/numofframes);
 end
 
+
+%% Smooth Tracked Motion with a Spline Smoothing Function
+[ xyzLocSmoothed, xyzLocTrackedMat, xyzLocSmoothedMat, numofparticles, FrameOfLastParticle ] = smoothtracks(xyzLocTracked, smoothparam);
+
+
+%% Save Work
 multiWaitbar('closeall');
 
 if ~exist('particlefilename','var')
@@ -190,6 +198,11 @@ if ~exist('particlefilename','var')
     warning('File name not specified. Saving to temp_Tracked.mat');
 end
     
-save([particlefilename,'_Tracked_DT',num2str(dist_thresh),'AT',num2str(appear_thresh),'BK',num2str(blink_keep),'.mat'], 'xyzLocTracked')
+try
+    save([OutputPathStr,particlefilename,'_Track_DT',num2str(dist_thresh*1E6),'AT',num2str(appear_thresh),'BK',num2str(blink_keep),'.mat'], 'xyzLocTracked', 'xyzLocSmoothed', 'particles', 'dist_thresh', 'appear_thresh', 'blink_keep'  )
+catch
+    save([particlefilename,'_Track_DT',num2str(dist_thresh*1E6),'AT',num2str(appear_thresh),'BK',num2str(blink_keep),'.mat'], 'xyzLocTracked', 'xyzLocSmoothed', 'particles', 'dist_thresh', 'appear_thresh', 'blink_keep' )
+end
 
-toc
+toc2
+

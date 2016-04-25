@@ -1,18 +1,21 @@
-function [ background ] = rollingavgbg( inputFileName, avgNframes, numframesTEST )
-%UNTITLED2 Summary of this function goes here
-%   Detailed explanation goes here
-%% Set Defaults and detect GPU and initial image size
+function [ background ] = rollingbg( inputFileName, avgNframes, numframesTEST )
+%rollingbg.m: Creates a background image for each hologram frame
+%   Sum N/2 frames before current frame and N/2 frames after current frame
+%   and divide the result by N. Do this for (NumberOfFrames-N)
+%   Do not include current frame in this calculation.
+%%  SHOULD I INCLUDE THE OPTION TO EXCLUDE SOME FRAMES BEFORE AND AFTER CURRENT FRAME? 
+%%
 tic
 
-avgNframesDefault = 401; %for first test sample average somewhere between 200-400 frames (100 leaves streaking of slow particles, 500 makes the mean too different)
+avgNframesDefault = 400; %for first test sample average somewhere between 200-400 frames (100 leaves streaking of slow particles, 500 makes the mean too different)
 OutputPathStr = 'background';
 [PathStr, firstname, ext] = fileparts(inputFileName);
 firstname = strrep(firstname, '*', '');
 
 if nargin < 2
     avgNframes = avgNframesDefault;
-elseif mod(avgNframes,2) ~= 1
-    avgNframes = 1+2*round(round(avgNframes)/2);
+elseif mod(avgNframes,2) ~= 0
+    avgNframes = 2*round(round(avgNframes)/2);
 end
 
 try
@@ -43,10 +46,10 @@ if ~exist('trimframes','var')
 end
 
 if nargin > 2
-    numframes = numframesTEST;
+    numframes = numframesTEST+avgNframes;
 end
 
-if ~exist(['.\', OutputPathStr], 'dir') & ~isempty(['.\', OutputPathStr])
+if ~exist(['.\', OutputPathStr], 'dir') && ~isempty(['.\', OutputPathStr])
     mkdir(OutputPathStr);
 else
     overwriteflag = input(['Directory named ',OutputPathStr,' already exists. Would you like to overwrite (y/n) '],'s');
@@ -60,25 +63,35 @@ if gpu_num > 0;
 end
 
 wb = waitbar(0,'Creating individual background files');
-for loop = 2:(avgNframes)
+% Create rolling background for first frame
+for loop = 2:(avgNframes/2)
+    L = loop*skipframes;
+    background = background + double(imread(filesort(L, 1).name));
+    waitbar((loop-1)/numframes,wb);
+end
+for loop = (avgNframes/2+2):(avgNframes+1)
     L = loop*skipframes;
     background = background + double(imread(filesort(L, 1).name));
     waitbar((loop-1)/numframes,wb);
 end
 
-% Save rolling background files
+% Save rolling background file for first frame
 background = gather(background/avgNframes);
-save([OutputPathStr,'\',filesort((avgNframes+1)/2).firstname,'.mat'],'background','-v7.3');
+save([OutputPathStr,'\',filesort(avgNframes/2+1).firstname,'.mat'],'background','-v7.3');
 
-for loop = avgNframes+1:numframes
+% Create and Save rolling background file for remaining frames
+for loop = avgNframes+2:numframes
     if gpu_num > 0;
         background=gpuArray(background*avgNframes);
     end
     L = loop*skipframes;
-    background = background + double(imread(filesort(L, 1).name))-double(imread(filesort(L-avgNframes, 1).name));
+    background = background + double(imread(filesort(L-avgNframes/2-1, 1).name));
+    background = background + double(imread(filesort(L, 1).name));
+    background = background - double(imread(filesort(L-avgNframes-1, 1).name));
+    background = background - double(imread(filesort(L-avgNframes/2, 1).name));
     waitbar((loop-1)/numframes,wb);
     background = gather(background/avgNframes);
-    save([OutputPathStr,'\',filesort(L-(avgNframes-1)/2).firstname,'.mat'],'background','-v7.3');
+    save([OutputPathStr,'\',filesort(L-avgNframes/2).firstname,'.mat'],'background','-v7.3');
 end
 
 close(wb);

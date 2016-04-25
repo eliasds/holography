@@ -5,17 +5,22 @@ dock
 %% Setup Constants
 %
 ext = '.tiff';
-z1 = 2.1E-3;
-z2 =  7.2E-3;
+z1 = -7.3E-3;
+z2 =  -2.5E-3;
 zstepsize = 5E-6;
 zsteps = 1+(z2-z1)/zstepsize;
 lambda = 632.8E-9;
 refractindex = 1.33;
 ps = 5.5E-6;
-mag = 4;
+mag = 500/75.6;
 zpad_xy = 200;
-useHOLOnum = 501;
+useHOLOnum = 51;
+createbackgroundflag = true;
+backgroundfilerangeflag = true;
+backgroundfilerange = [1:101];
 cropflag = true; bottom = 2048; top = 1;
+latecropflag = true;
+latecropbox = [256 256 1023 1023];
 pauseflag = false;
 maskflag = true;
 mask = 1;
@@ -23,14 +28,12 @@ mask = 1;
 vortflag = true;
 vortloc = NaN;
 vortimg.img = NaN;
-createbackgroundflag = true;
-backgroundfilerangeflag = true;
-backgroundfilerange = [350:650];
 propregiontest = [1 1 1023 1023];
 iminflag = true;
 bringtomeanflag = false;
 maskfile = nan;
 fignum = 4321;
+toporbottom = 'bottom';
 
 z0 = 0;
 z3 = 0;
@@ -41,7 +44,7 @@ z4 = 0;
 
 
 % Constants to save
-namesofconstants = {'earlycropregion','ext','z0','z1','z2','z3','z4','zsteps','zstepsize','lambda','refractindex','ps','mag','mask','Imin','zmap','HOLO','HOLOBGR','useHOLOnum','backgroundfilerangeflag','backgroundfilerange','cropflag','bottom','top','zpad','background','maskflag','masktype','maskfile','vortflag','vortloc','vortimg','bringtomeanflag','rect_xydxdy'};
+namesofconstants = {'latecropflag','latecropbox','iminflag','toporbottom','pauseflag','wouldyouliketocrop','croparea','earlycropregion','ext','z0','z1','z2','z3','z4','zsteps','zstepsize','lambda','refractindex','ps','mag','mask','Imin','zmap','HOLO','HOLOBGR','useHOLOnum','backgroundfilerangeflag','backgroundfilerange','cropflag','bottom','top','zpad','background','maskflag','masktype','maskfile','vortflag','vortloc','vortimg','bringtomeanflag','rect_xydxdy'};
 [~,nocorder] = sort(lower(namesofconstants));
 namesofconstants = namesofconstants(nocorder);
     
@@ -178,7 +181,7 @@ if createbackgroundflag == true && backgroundfilerangeflag == false && exist('.\
             createbackgroundflag = false;
 
         otherwise
-            error(['Unexpected option: ' vortflag])
+            error(['Unexpected option: ' overwritebackground])
     end
 end
 
@@ -192,7 +195,7 @@ if createbackgroundflag == true;
         
     end
     background = imcrop(background,rect_xydxdy);
-
+    
 else
     try
         load('background.mat');
@@ -291,9 +294,19 @@ end
 
 %% Plot and Save HOLO
 %
+HOLO4Imin = HOLO0001;
+if latecropflag == true;
+    HOLO0001 = imcrop(HOLO0001,latecropbox);
+    HOLO0001BG = imcrop(HOLO0001BG,latecropbox);
+    background = imcrop(background,latecropbox);
+end
 figure
-
 imagesc(HOLO0001); colormap gray; colorbar; axis image; axis ij;title([useHOLOnumstr,pwd])
+figure
+imagesc(HOLO0001BG); colormap gray; colorbar; axis image; axis ij;title([useHOLOnumstr,pwd])
+figure
+imagesc(background); colormap gray; colorbar; axis image; axis ij;title([useHOLOnumstr,pwd])
+
 
 if pauseflag == true;
     
@@ -315,8 +328,11 @@ if iminflag == false
     
 else
     
-    [Imin0001, zmap0001] = imin((HOLO0001),lambda/refractindex,linspace(z1,z2,zsteps),ps/mag,'mask',mask,'zpad',zpad);
-    
+    [Imin0001, zmap0001] = imin((HOLO4Imin),lambda/refractindex,linspace(z1,z2,zsteps),ps/mag,'mask',mask,'zpad',zpad);
+    if latecropflag == true;
+        Imin0001 = imcrop(Imin0001,latecropbox);
+        zmap0001 = imcrop(zmap0001,latecropbox);
+    end
 end
 
 %% Save Constants
@@ -325,7 +341,9 @@ HOLO = HOLO0001BG;
 HOLOBGR = HOLO0001;
 Imin = Imin0001;
 zmap = zmap0001;
-save(['iminSingle',useHOLOnumstr,'constants.mat'],namesofconstants{:});
+save(['iminSingle',useHOLOnumstr,'constants.mat'],namesofconstants{:},'namesofconstants');
+
+imwrite(uint8(background), ['background',num2str(backgroundfilerange(1)),'to',num2str(backgroundfilerange(end)),'.png']);
 
 
 %% Plot and Save Imin

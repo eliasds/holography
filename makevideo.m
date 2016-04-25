@@ -22,6 +22,7 @@ newbackground = 0;
 outputpathstr = 'analysis';
 outputFileName = 'video';
 backgroundFileName = 'background';
+rollingbgflag = false;
 averagebgflag = false;
 usebgflag = false;
 vortflag = false;
@@ -49,6 +50,10 @@ if strcmpi(ext,'.avi')
 else
     filesort = dir([firstname,'*',ext]);
     numfiles = numel(filesort);
+    for L = 1:numfiles
+        [filesort(L).pathstr, filesort(L).firstname, filesort(L).ext] = ...
+            fileparts([filesort(L).name]);
+    end
     Ein = imread(filesort(1, 1).name);
     [m,n]=size(Ein);
 end
@@ -106,12 +111,11 @@ while ~isempty(varargin)
             vidtype = 'MPEG-4';
             varargin(1) = [];
             
-        case 'CROP'
+        case {'CROP','IMCROP'}
             if numel(varargin{2}) ~= 4
                 rect = [(varargin{2}(1:2)), 1023,1023];
             else
                 rect = [varargin{2}];
-                rect(3:4)=rect(3:4)-1;
             end
             varargin(1:2) = [];
             
@@ -136,7 +140,10 @@ while ~isempty(varargin)
             vortloc = varargin{2};
             varargin(1:2) = [];
             
-        case 'ROLLINGBACKGROUND'
+        case {'ROLLINGBACKGROUND','ROLLINGBG'}
+            rollingbgflag = true;
+            varargin(1) = [];
+            
         case 'FFT'
             fftflag = true;
             varargin(1) = [];
@@ -188,13 +195,17 @@ end
 
 % Create Video Array
 wb = waitbar(0,'Creating Video');
-for loop=1:numframes
-    L=loop*skipframes;
+for L = firstframe:skipframes:lastframe
 %     load(filesort(L, 1).name,'Imin'); Ein=Imin;
+    if rollingbgflag == true
+        varnam = who('-file',['background\',(filesort(L, 1).firstname),'.mat']);
+        background = load(['background\',(filesort(L, 1).firstname),'.mat'],varnam{1});
+        background = background.(varnam{1});
+    end
     if exist('vidin','var')
-        Ein = double(readFrame(vidin));
+        Ein = single(readFrame(vidin));
     else
-        Ein = double(imread(filesort(L, 1).name))./background;
+        Ein = single(imread(filesort(L, 1).name))./background;
     end
     newbackground = newbackground + Ein;
     Ein = imcrop(Ein,rect);
@@ -219,11 +230,11 @@ for loop=1:numframes
     else
         Eout = Ein;
     end
-    vidout(loop).cdata = uint8(abs(Eout));
-    vidout(loop).cdata(:,:,2) = vidout(loop).cdata(:,:,1);
-    vidout(loop).cdata(:,:,3) = vidout(loop).cdata(:,:,1);
-    writeVideo(writerObj,vidout(loop));
-    waitbar((loop-1)/numframes,wb);
+    vidout(L).cdata = uint8(abs(Eout));
+    vidout(L).cdata(:,:,2) = vidout(L).cdata(:,:,1);
+    vidout(L).cdata(:,:,3) = vidout(L).cdata(:,:,1);
+    writeVideo(writerObj,vidout(L));
+    waitbar((L-firstframe)/numframes,wb);
 end
 close(writerObj);
 background = newbackground/numframes;
@@ -247,4 +258,5 @@ if averagebgflag == true;
     end
 end
 
-toc
+toc2
+

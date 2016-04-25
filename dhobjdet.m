@@ -48,8 +48,8 @@ function [Imin,zmap,constants,xyzLoc,particlefilename,th,th_all,Xauto,Yauto,Zaut
 tic
 
 dirname = '';
-filename    = 'DH_';
-ext = 'tif';
+filename    = 'Basler_';
+ext = 'tiff';
 backgroundfile = 'background.mat';
 constantsfile = 'constants.mat';
 createIminfilesflag = false;
@@ -57,22 +57,26 @@ runparticledetectionflag = true;
 gpuflag = true;
 particlevideoflag = true;
 earlycropflag = false;
-latecropflag = false;
+earlycropregion = [0 0 0 0];
+detectcropflag = false;
 bringtomeanflag = false;
 detectbestthreshflag = true;
-try
-    load([dirname,constantsfile])
-catch
-    disp('Trying one directory up')
-    currentdir = pwd;
-    cd ..;
-    try
-        load([dirname,constantsfile])
-    catch
-        cd currentdir;
-        return
-    end
-end
+greyoutflag = false;
+greyoutregion = [0 0 0 0];
+resizeflag = false;
+resizeval = 4;
+% maxint=2; %overide default max intensity: 2*mean(Imin(:))
+% mag = 4; %Magnification
+% ps = 5.5E-6; % Pixel Size in meters
+% refractindex = 1.33;
+% lambda = 632.8E-9; % Laser wavelength in meters
+z1=1.6E-3;
+z2=7.3E-3;
+zstepsize=5e-6;
+zsteps=1+(z2-z1)/zstepsize;
+top = 1;
+bottom = 1024;
+rect_xydxdy = [1,1,1023,1023];
 thlevel = 0.2;
 thparam = 0.333;
 derstr = 'R8D5E4';
@@ -84,26 +88,20 @@ skipframes = 1; % skipframes = 1 is default
 framerate = 20;
 IminPathStr = 'iminfiles\';
 OutputPathStr = ['analysis-',datestr(now,'yyyymmdd'),'\'];
-% maxint=2; %overide default max intensity: 2*mean(Imin(:))
-% mag = 4; %Magnification
-% ps = 5.5E-6; % Pixel Size in meters
-% refractindex = 1.33;
-% lambda = 632.8E-9; % Laser wavelength in meters
-% z1=1.6E-3;
-% z2=7.3E-3;
-% zstepsize=5e-6;
-% zsteps=1+(z2-z1)/zstepsize;
-% vortloc=[1180, 2110, 2.7E-3]; %location of vorticella in "cuvette in focus"
-% vortloc=[1535, 2105, 0]; %location of vorticella in "vort in focus"
-% zpad=2048;
-% radix2=2048;
-% rect_xydxdy = [vortloc(1)-512,vortloc(2)-1024,1023,1023]; %for "cuvette in focus" data
-% rect_xydxdy = [1550-512,2070-1024,1023,1023]; %for "vort in focus" data
-% rect_xydxdy = [2560-radix2,2160-radix2,radix2-1,radix2-1]; %bottom right
-% rect_xydxdy = [vortloc(1)-radix2/2,vortloc(2)-radix2,radix2-1,radix2-1]; %Cropping
-% rect_xydxdy = [114,114,1800,1800]; %temp Cropping
-% rect_xydxdy = [650-512,1865-1024,1023,1023];
-% rect_xydxdy = [Xceil,Yceil,Xfloor-Xceil-1,Yfloor-Yceil-1];
+clear xyzLoc
+
+try
+    load([dirname,constantsfile])
+catch
+    disp('There is no constants.mat file in this directory.')
+    exitearly = input('Would you like to continue with default parameters? (y/n): ','s');
+    if isequal(upper(exitearly),'Y')
+    else
+        error('Exiting Function')
+    end
+end
+
+
 
 
 %% Define varargin variables
@@ -135,15 +133,15 @@ while ~isempty(varargin)
             
         case 'EARLYCROP'
             earlycropflag = true;
-            varargin(1) = [];
+            earlycropregion = varargin{2};
+            varargin(1:2) = [];
             
-        case 'LATECROP'
-            latecropflag = true;
+        case {'DETECTIONCROP','LATECROP'}
+            detectcropflag = true;
             if numel(varargin{2}) ~= 4
                 rect_xydxdy_copy = [(varargin{2}(1:2)), 1023,1023];
             else
                 rect_xydxdy_copy = [varargin{2}];
-                rect_xydxdy_copy(3:4)=rect_xydxdy_copy(3:4)-1;
             end
             varargin(1:2) = [];
             
@@ -220,6 +218,16 @@ while ~isempty(varargin)
             minmean = varargin{2};
             varargin(1:2) = [];
             
+        case 'RESIZE'
+            resizeflag = true;
+            resizeval = varargin{2};
+            varargin(1:2) = [];
+            
+        case 'GREYOUT'
+            greyoutflag = true;
+            greyoutregion = varargin{2};
+            varargin(1:2) = [];
+            
         otherwise
             error(['Unexpected option: ' varargin{1}])
             
@@ -229,9 +237,9 @@ end
 %% Setup secondary constants and variables
 %
 % Constants to save
-namesofconstants = {'xyzLoc','OutputPathStr','particlefilename','lambda','mag','maxint','ps','refractindex','zsteps','zstepsize','thlevel','vortloc','z0','z1','z2','z3','z4','rect_xydxdy','top','bottom','mask','derstr','thparam','th','th_all','minmean'};
-
-
+namesofconstants = {'xyzLoc','OutputPathStr','particlefilename','lambda','mag','maxint','ps','refractindex','zsteps','zstepsize','thlevel','vortloc','z0','z1','z2','z3','z4','rect_xydxdy','top','bottom','mask','derstr','thparam','th','th_all','minmean','earlycropregion','earlycropflag','detectcropflag','greyoutregion','greyoutflag'};
+[~,nocorder] = sort(lower(namesofconstants));
+namesofconstants = namesofconstants(nocorder);
 
 
 Z = linspace(z1,z2,zsteps);
@@ -257,8 +265,9 @@ HoloFile = [filesort(1, 1).name];
 varnam = who('-file',HoloFile);
 
 % Change Default Crop Parameters
-if latecropflag == true
+if detectcropflag == true
     rect_xydxdy = rect_xydxdy_copy;
+%     earlycropregion = [top,top,bottom-top,bottom-top];
 end
 
 
@@ -267,7 +276,8 @@ if ~exist('maxint','var')
     Ein = load([filesort(L, 1).name],varnam{1});
     Ein = Ein.(varnam{1});
     if earlycropflag == true
-        Ein = imcrop(Ein,[top,top,bottom-top,bottom-top]);
+        Ein = imcrop(Ein,earlycropregion);
+%         Ein = imcrop(Ein,[top,top,bottom-top,bottom-top]);
     end
     EinNoZeros = Ein; EinNoZeros(EinNoZeros==0)=NaN;
     maxint=2*nanmean(real(EinNoZeros(:)));
@@ -308,24 +318,29 @@ for L=firstframe:skipframes:lastframe
     % Create Imin files
     if createIminfilesflag == true;
         
-        % import data from tif files.
-        % Ein = (double(imread([filesort(L).name])));o
-        %     Holo = background;
-        %     background = double(imread([filesort(L+skipframes).name]));
-        %     Ein = Holo./background;
-        Ein = load([filesort(L, 1).name],varnam{1});
-        Ein = Ein.(varnam{1});
-        % Ein = imcrop(Ein,rect_xydxdy);
-        % Ein=Ein(vortloc(2)-radix2+1:vortloc(2),vortloc(1)-radix2/2:vortloc(1)-1+radix2/2);
-        % Ein=Ein(1882-768:1882+255,1353-511:1353+512);
-        % Ein = (double(background));
-        % Ein(isnan(Ein)) = mean(background(:));
-        % Ein(Ein>maxint)=maxint;
+        if isequal(ext,'.mat')
+            % import data from *.mat files.
+            Ein = load([filesort(L, 1).name],varnam{1});
+            Ein = Ein.(varnam{1});
+        else
+            % import data from *.tif files.
+            Ein = (double(imread([filesort(L, 1).name])));
+            Ein = Holo./background;
+        end
+        
+        if greyoutflag == true; %Remove problem regions like Vorticella
+            [m2,~] = size(greyoutregion);
+            for L2 = 1:m2
+                Ein(greyoutregion(L2,2):greyoutregion(L2,2)+greyoutregion(L2,4)+1,greyoutregion(L2,1):greyoutregion(L2,1)+greyoutregion(L2,3)+1) = mean(Ein(:));
+            end
+        end
         
         % Crop large bordering objects (reduces 
         if earlycropflag == true
-            Ein = imcrop(Ein,[top,top,bottom-top,bottom-top]);
+            Ein = imcrop(Ein,earlycropregion);
         end
+        
+        % Normalize Image and Remove NaNs
         EinNoZeros = Ein; EinNoZeros(EinNoZeros==0)=NaN;
         meanint = nanmean(EinNoZeros(:));
         maxint = 2*nanmean(EinNoZeros(:));
@@ -337,6 +352,11 @@ for L=firstframe:skipframes:lastframe
             Ein(isnan(Ein)) = 0;
         end
 
+        
+        if resizeflag == true
+            Ein = imresize(Ein,resizeval);
+        end
+        
         % Save Imin and zmap files
         if gpuflag == true;
             [Imin, zmap] = imin(Ein,lambda/refractindex,Z,ps/mag,'zpad',zpad,'mask',mask);
@@ -375,12 +395,12 @@ for L=firstframe:skipframes:lastframe
         zmap=imcrop(zmap,rect_xydxdy);
 
         % Detect Particles and Save
-        [Xauto,Yauto,Zauto,th,th_all] = detection(Imin, zmap, thlevel, derstr, minmean);
-        xyzLoc(loop).time = [Xauto;Yauto;Zauto]';
+        [Xauto,Yauto,Zauto,th,th_all] = detection3(Imin, zmap, thlevel, derstr, minmean);
+        xyzLoc(loop).time = [Xauto*ps/mag;Yauto*ps/mag;Zauto]';
         
         % Add 2D particle threshold video data to struct
         if particlevideoflag == true
-            threshmov(loop).cdata = uint8(imresize(th,1/4))*255;
+            threshmov(loop).cdata = uint8(imresize(th,[512 512]))*255;
             threshmov(loop).cdata(:,:,2) = threshmov(loop).cdata(:,:,1);
             threshmov(loop).cdata(:,:,3) = threshmov(loop).cdata(:,:,1);
         end
@@ -426,6 +446,8 @@ end
 
 
 
-toc
+toc2
+
 end
+
 

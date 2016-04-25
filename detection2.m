@@ -20,14 +20,14 @@ end
 % derstr = 'R8D5E4D5E4';
 
 %%
-if meanflag == false
+% if meanflag == false
     h = 1/9*ones(3);
     zmap = filter2(h,zmap); %Smooth zmap by averaging over all adjacent pixels
     zmap = filter2(h,filter2(h,zmap));
-end
+% end
 th = Imin<thlevel;
 th_all = uint8(th);
-[m,~] = size(Imin);
+[m,n] = size(Imin);
 thIteration = 1;
 
 %%
@@ -97,30 +97,41 @@ thIteration = thIteration + 1; th_all(:,:,thIteration) = th;
 th = bwlabel(th,4);
 thIteration = thIteration + 1; th_all(:,:,thIteration) = th;
 autodetstruct = regionprops(th,'Centroid','PixelIdxList');
+
+th2 = zeros(m,n);
+for L = 1:numel(autodetstruct)
+    idx = round(autodetstruct(L).Centroid);
+    th2(idx(2),idx(1)) = 1;
+end
+thIteration = thIteration + 1; th_all(:,:,thIteration) = th2;
+th2 = imdilate(th2,makering(7,9));
+thIteration = thIteration + 1; th_all(:,:,thIteration) = th2;
+
 if meanflag == true; %Determine Z-Values from perimeter means and X & Y-values from centroid
-    th = bwperim(th,4).*th;
-    thIteration = thIteration + 1; th_all(:,:,thIteration) = th;
-    autodetstructp = regionprops(th,'PixelIdxList');
-    xyCentroid = [autodetstruct.Centroid];
+%     th = bwperim(th,4).*th;
+    th2 = bwlabel(th2,4);
+    thIteration = thIteration + 1; th_all(:,:,thIteration) = th2;
+    autodetstructp = regionprops(th2,'Centroid','PixelIdxList');
+    xyCentroid = [autodetstructp.Centroid];
     Xauto = xyCentroid(1:2:end);
     Yauto = xyCentroid(2:2:end);
-    Zauto = zeros(size(autodetstruct))';
-    for i = 1:numel(autodetstruct)
-        idxp = autodetstructp(i).PixelIdxList;
-        Zauto(i) = mean(zmap(idxp));
+    Zauto = zeros(size(autodetstructp))';
+    for L = 1:numel(autodetstructp)
+        idxp = autodetstructp(L).PixelIdxList;
+        Zauto(L) = mean(zmap(idxp));
     end
+    th = th2; thIteration = thIteration + 1; th_all(:,:,thIteration) = th2;
 else % Determine X,Y,Z-values from minimum intensity pixel
     Xauto = zeros(size(autodetstruct))';
     Yauto = zeros(size(autodetstruct))';
     Zauto = zeros(size(autodetstruct))';
-    for i = 1:numel(autodetstruct)
-        clear('idx','particlepixels','minidx')
-        idx = autodetstruct(i).PixelIdxList;
+    for L = 1:numel(autodetstruct)
+        idx = autodetstruct(L).PixelIdxList;
         particlepixels = Imin(idx);
         [~,minidx] = min(particlepixels);
-        Xauto(i) = ceil(idx(minidx)/m);
-        Yauto(i) = rem(idx(minidx),m);
-        Zauto(i) = zmap(idx(minidx));
+        Xauto(L) = ceil(idx(minidx)/m);
+        Yauto(L) = rem(idx(minidx),m);
+        Zauto(L) = zmap(idx(minidx));
     end
 end
 
