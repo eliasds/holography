@@ -18,20 +18,10 @@ elseif mod(avgNframes,2) ~= 0
     avgNframes = 2*round(round(avgNframes)/2);
 end
 
-try
-    gpu_num = gpuDeviceCount; %Determines if there is a CUDA enabled GPU
-catch err
-    gpu_num = 0;
-end
+gpu_num = gpuUseful; %Determines if there is a CUDA enabled GPU
 
-filesort = dir([firstname,'*',ext]);
-numfiles = numel(filesort);
+[filesort,numfiles] = filesortstruct([firstname,'*',ext]);
 background = double(imread(filesort(1, 1).name));
-for L = 1:numfiles
-    [filesort(L).pathstr, filesort(L).firstname, filesort(L).ext] = ...
-        fileparts([filesort(L).name]);
-    %filesort(i).matname=strcat(filesort(i).matname,'.mat');
-end
 
 [m,n]=size(background);
 rect = [1,1,m-1,n-1];
@@ -81,8 +71,9 @@ save([OutputPathStr,'\',filesort(avgNframes/2+1).firstname,'.mat'],'background',
 
 % Create and Save rolling background file for remaining frames
 for loop = avgNframes+2:numframes
+    background = background*avgNframes;
     if gpu_num > 0;
-        background=gpuArray(background*avgNframes);
+        background = gpuArray(background);
     end
     L = loop*skipframes;
     background = background + double(imread(filesort(L-avgNframes/2-1, 1).name));
