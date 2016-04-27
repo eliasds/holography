@@ -54,7 +54,14 @@ else
         [filesort(L).pathstr, filesort(L).firstname, filesort(L).ext] = ...
             fileparts([filesort(L).name]);
     end
-    Ein = imread(filesort(1, 1).name);
+    if strcmpi(ext,'.mat')
+%         varnam = who('-file',(filesort(1, 1).name));
+%         Ein = load((filesort(1, 1).name),varnam{1});
+%         Ein = Ein.(varnam{1});
+        Ein = varextract(filesort(1, 1).name);
+    else
+        Ein = imread(filesort(1, 1).name);
+    end
     [m,n]=size(Ein);
 end
 rect = [1,1,m-1,n-1];
@@ -198,12 +205,18 @@ wb = waitbar(0,'Creating Video');
 for L = firstframe:skipframes:lastframe
 %     load(filesort(L, 1).name,'Imin'); Ein=Imin;
     if rollingbgflag == true
-        varnam = who('-file',['background\',(filesort(L, 1).firstname),'.mat']);
-        background = load(['background\',(filesort(L, 1).firstname),'.mat'],varnam{1});
-        background = background.(varnam{1});
+%         varnam = who('-file',['background\',(filesort(L, 1).firstname),'.mat']);
+%         background = load(['background\',(filesort(L, 1).firstname),'.mat'],varnam{1});
+%         background = background.(varnam{1});
+        background = varextract(['background\',(filesort(L, 1).firstname),'.mat']);
     end
     if exist('vidin','var')
         Ein = single(readFrame(vidin));
+    elseif strcmpi(ext,'.mat')
+%         varnam = who('-file',(filesort(L, 1).name));
+%         Ein = load((filesort(L, 1).name),varnam{1});
+%         Ein = Ein.(varnam{1});
+        Ein = varextract(filesort(L, 1).name);
     else
         Ein = single(imread(filesort(L, 1).name))./background;
     end
