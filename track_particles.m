@@ -35,9 +35,9 @@ end
 
 %Go through each frame, tracking particles
 multiWaitbar('Tracking Particles...',0);
-for L = 2:length(xyzLocScaled)
-    mat1 = xyzLocScaled(L-1).time;
-    mat2 = xyzLocScaled(L).time;
+for La = 2:length(xyzLocScaled)
+    mat1 = xyzLocScaled(La-1).time;
+    mat2 = xyzLocScaled(La).time;
     [m,~] = size(mat1);
     [n,~] = size(mat2);
     
@@ -61,17 +61,17 @@ for L = 2:length(xyzLocScaled)
     for j = 1:length(particles)
         repeat = 0;
         for i = 1:blink_keep
-            particles(j).pos(L+i-1,:) = nan(1,3);
-            particles(j).match(L+i-1,1) = 0;
+            particles(j).pos(La+i-1,:) = nan(1,3);
+            particles(j).match(La+i-1,1) = 0;
             
-            if L-i > 0 && particles(j).match(L-i,1) == 1
+            if La-i > 0 && particles(j).match(La-i,1) == 1
                 repeat = 1;
             end
         end
         
         if repeat
-            particles(j).match(L,1) = 0;
-            particles(j).pos(L,:) = particles(j).pos(L-1,:);
+            particles(j).match(La,1) = 0;
+            particles(j).pos(La,:) = particles(j).pos(La-1,:);
         end
         multiWaitbar('Filling in data for blinking particles...',j/length(particles));
     end
@@ -83,12 +83,12 @@ for L = 2:length(xyzLocScaled)
     multiWaitbar('Creating NEW Distance Matrix Between Adjacent Frames...',0);
     for j = 1:partLength
         for i = 1:n
-            dist(i,j) = sqrt((particles(j).pos(L-1,1)-mat2(i,1))^2 + ...
-                (particles(j).pos(L-1,2)-mat2(i,2))^2 + ...
-                (particles(j).pos(L-1,3)-mat2(i,3))^2);
+            dist(i,j) = sqrt((particles(j).pos(La-1,1)-mat2(i,1))^2 + ...
+                (particles(j).pos(La-1,2)-mat2(i,2))^2 + ...
+                (particles(j).pos(La-1,3)-mat2(i,3))^2);
         end
         for k = 1:blink_keep
-            if L-k > 0 && ~particles(j).match(L-k,1)
+            if La-k > 0 && ~particles(j).match(La-k,1)
                 keep(j,1) = keep(j,1) + 1;
             end
         end
@@ -110,7 +110,7 @@ for L = 2:length(xyzLocScaled)
         keepMatch = 0;
         for j = 1:partLength
             
-            if ~isempty(distIndex) && ~particles(j).match(L-1,1)
+            if ~isempty(distIndex) && ~particles(j).match(La-1,1)
                 for k = 1:length(distIndex)
                     if distIndex(k) == j
                         keepMatch = 1;
@@ -119,7 +119,7 @@ for L = 2:length(xyzLocScaled)
             end
                 
             %If match, record index of particle in particles
-            if keepMatch || (~isempty(index) && isequal(mat1(index(minInd),:), particles(j).pos(L-1,:)))
+            if keepMatch || (~isempty(index) && isequal(mat1(index(minInd),:), particles(j).pos(La-1,:)))
                 isInMatch = 1; 
                 ind = j;
                 break
@@ -127,16 +127,16 @@ for L = 2:length(xyzLocScaled)
         end        
         
         if isInMatch
-            particles(ind).pos(L,:) = mat2(i,:);
-            particles(ind).match(L,1) = 1;
+            particles(ind).pos(La,:) = mat2(i,:);
+            particles(ind).match(La,1) = 1;
         else
-            particles(end+1).pos(1:L-1,:) = nan(L-1,3);
-            particles(end).match(1:L,1) = zeros(L,1);
-            particles(end).pos(L,:) = mat2(i,:);
+            particles(end+1).pos(1:La-1,:) = nan(La-1,3);
+            particles(end).match(1:La,1) = zeros(La,1);
+            particles(end).pos(La,:) = mat2(i,:);
         end
 %         multiWaitbar('Match Particles from Previous Frame...',i/n);
     end
-    multiWaitbar('Tracking Particles...',L/length(xyzLocScaled));
+    multiWaitbar('Tracking Particles...',La/length(xyzLocScaled));
 
 end
 
@@ -171,23 +171,29 @@ end
 %Store particles as fn of time (to plot)
 numofframes = length(xyzLocScaled);
 multiWaitbar('Reformatting Particle Data...',0);
-for L = 1:numofframes
+for La = 1:length(particles)
+    particles(La).pos(:,3) = particles(La).pos(:,3)*scale;
+end
+for La = 1:numofframes
     index = 1;
-    xyzLocTracked(L).time = []; 
-    for i = 1:length(particles)
-        if ~isempty(particles(i).pos) && ~isnan(particles(i).pos(L,1))
-            xyzLocTracked(L).time(index,1:3) = particles(i).pos(L,1:3);
-            xyzLocTracked(L).time(index,3) = xyzLocTracked(L).time(index,3)*scale;
-            xyzLocTracked(L).time(index,4) = i;
+    xyzLocTracked(La).time = [];
+    for Lb = 1:length(particles)
+        if ~isempty(particles(Lb).pos) && ~isnan(particles(Lb).pos(La,1))
+            xyzLocTracked(La).time(index,1:3) = particles(Lb).pos(La,1:3);
+            xyzLocTracked(La).time(index,4) = Lb;
             index = index + 1;
         end
     end
-    multiWaitbar('Reformatting Particle Data...',L/numofframes);
+    multiWaitbar('Reformatting Particle Data...',La/numofframes);
 end
 
 
 %% Smooth Tracked Motion with a Spline Smoothing Function
 [ xyzLocSmoothed, xyzLocTrackedMat, xyzLocSmoothedMat, numofparticles, FrameOfLastParticle ] = smoothtracks(xyzLocTracked, smoothparam);
+
+
+%% Compute Velocity information and store in particles variable
+particles = velocity(particles);
 
 
 %% Save Work
