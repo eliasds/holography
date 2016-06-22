@@ -80,6 +80,7 @@ for loop = avgNframes+2:numframes
     background = background + double(imread(filesort(L, 1).name));
     background = background - double(imread(filesort(L-avgNframes-1, 1).name));
     background = background - double(imread(filesort(L-avgNframes/2, 1).name));
+    background(background<0) = 0;
     waitbar((loop-1)/numframes,wb);
     background = gather(background/avgNframes);
     save([OutputPathStr,'\',filesort(L-avgNframes/2).firstname,'.mat'],'background','-v7.3');
