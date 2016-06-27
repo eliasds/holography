@@ -7,13 +7,14 @@ tic
 % avgNframesDefault = 401; %for first test sample average somewhere between 200-400 frames (100 leaves streaking of slow particles, 500 makes the mean too different)
 BgPathStr = 'background\';
 OutputPathStr = 'holofiles\';
-HoloExt = '.tiff';
+% HoloExt = '.tiff';
 BgExt = '.mat';
-[~, firstname, ~] = fileparts(BgFileName);
+[~, firstname, HoloExt] = fileparts(BgFileName);
 firstname = strrep(firstname, '*', '');
 skipframes = 1;
 firstframe = 1;
 testflag = false;
+nanflag = false;
 
 
 try
@@ -62,6 +63,10 @@ while ~isempty(varargin)
         case 'LASTFRAME'
             lastframe = varargin{2};
             varargin(1:2) = [];
+
+        case 'NANINF'
+            nanflag = true;
+            varargin(1) = [];
             
         otherwise
             error(['Unexpected option: ' varargin{1}])
@@ -92,8 +97,21 @@ for La = firstframe:skipframes:lastframe
 %         background=gpuArray(background);
 %     end
     HoloIn = single(imread([filesort(La, 1).firstname,HoloExt]));
+    maxval = max([HoloIn(:);background(:)]);
     Holo = HoloIn./background;
     Holo = imcrop(Holo,cropregion);
+    if nanflag == true
+        Holo(isnan(Holo)) = 0;
+        HoloTemp = Holo;
+%         HoloTemp(isinf(Holo)) = 0;
+        HoloTemp(Holo>maxval) = maxval;
+        for Lb = 1:2
+            replaceInf = mean(HoloTemp(:));
+%             HoloTemp(isinf(Holo)) = 4*replaceInf;
+            HoloTemp(Holo>4*replaceInf) = 4*replaceInf;
+        end
+        Holo = HoloTemp;
+    end
 %     Holo = gather(Holo);
     save([OutputPathStr,filesort(La).firstname,'.mat'],'Holo','-v7.3');
     waitbar((La-firstframe+1)/numframes,wb);
