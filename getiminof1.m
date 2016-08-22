@@ -5,22 +5,23 @@ dock
 %% Setup Constants
 %
 ext = '.tiff';
-z1 = -7.3E-3;
-z2 =  -2.5E-3;
+z1 = 5e-3;  %first depth to reconstruct
+z2 =  10E-3;  %last depth to reconstruct
 zstepsize = 5E-6;
-zsteps = 1+(z2-z1)/zstepsize;
-lambda = 632.8E-9;
+zsteps = abs(1+(z2-z1)/zstepsize);
+lambda = 632.8E-9;  %wavelength of laser
 refractindex = 1.33;
-ps = 5.5E-6;
-mag = 500/75.6;
-zpad_xy = 200;
-useHOLOnum = 51;
+ps = 5.5E-6;  %pixel size of camera
+mag = 500/75.6; %magnification of optical system
+zpad_xy = 200;  %pad raw data with 200 pixels on each side
+useHOLOnum = 101;  %choose whic raw image to analyze
+fps = 25;
 createbackgroundflag = true;
 backgroundfilerangeflag = true;
-backgroundfilerange = [1:101];
+backgroundfilerange = [81:120];  %how many images to use for background average
 cropflag = true; bottom = 2048; top = 1;
 latecropflag = true;
-latecropbox = [256 256 1023 1023];
+latecropbox = [101 101 1600 1600];
 pauseflag = false;
 maskflag = true;
 mask = 1;
@@ -28,7 +29,7 @@ mask = 1;
 vortflag = true;
 vortloc = NaN;
 vortimg.img = NaN;
-propregiontest = [1 1 1023 1023];
+propregiontest = [1 1 2047 2047];
 iminflag = true;
 bringtomeanflag = false;
 maskfile = nan;
@@ -44,7 +45,7 @@ z4 = 0;
 
 
 % Constants to save
-namesofconstants = {'latecropflag','latecropbox','iminflag','toporbottom','pauseflag','wouldyouliketocrop','croparea','earlycropregion','ext','z0','z1','z2','z3','z4','zsteps','zstepsize','lambda','refractindex','ps','mag','mask','Imin','zmap','HOLO','HOLOBGR','useHOLOnum','backgroundfilerangeflag','backgroundfilerange','cropflag','bottom','top','zpad','background','maskflag','masktype','maskfile','vortflag','vortloc','vortimg','bringtomeanflag','rect_xydxdy'};
+namesofconstants = {'fps','latecropflag','latecropbox','iminflag','toporbottom','pauseflag','wouldyouliketocrop','croparea','earlycropregion','ext','z0','z1','z2','z3','z4','zsteps','zstepsize','lambda','refractindex','ps','mag','mask','Imin','zmap','HOLO','HOLOBGR','useHOLOnum','backgroundfilerangeflag','backgroundfilerange','cropflag','bottom','top','zpad','background','maskflag','masktype','maskfile','vortflag','vortloc','vortimg','bringtomeanflag','rect_xydxdy'};
 [~,nocorder] = sort(lower(namesofconstants));
 namesofconstants = namesofconstants(nocorder);
     
@@ -248,7 +249,7 @@ switch upper(imagepropagain)
         if strcmpi(pickpropregion,'N')
             while propregiontest(4) < propcroparea-1
                 figure(7312)
-                [~, propregiontest] = imcrop(uint8(HOLO0001)); propregiontest = ceil(propregiontest)
+                [~, propregiontest] = imcrop(uint8(255*(HOLO0001 - min(HOLO0001(:)))./(max(HOLO0001(:))-min(HOLO0001(:))))); propregiontest = ceil(propregiontest)
                 propcroparea = input('How big do you want the cropped region (1024 default): ');
                 if isempty(propcroparea);
                     propcroparea = 1024;
