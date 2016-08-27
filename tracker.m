@@ -35,6 +35,9 @@ for i = 1:size(init,1)              %For each particle...
     particles(i).match(1,1) = 0;
 end
 
+%Particles are rows in the xyzLocScaled(i).time matrix: To get particle 5's
+%(x, y, z) coords at time 2, do xyzLocScaled(2).time(5, :)
+
 %Now particles has one entry for each particle in the first frame with (x,
 %y, z) coords in the position field and match as 0
 
@@ -48,11 +51,10 @@ for La = 2:length(xyzLocScaled)
     %m is # of particles in first frame and n is # of particles in second
     %not equal iff a particle drifted off the screen
     
-    %TODO here is where to init the k-d tree
-    
+    %Init k-d tree
+    tree = const_tree(mat2, 1);
     
     %{
-    
     %Creates distance matrix between every particle in frame L and L + 1
     dist_mat = nan(m,n);
 %     multiWaitbar('Creating Distance Matrix Between Frames Adjacent Frames...',0);

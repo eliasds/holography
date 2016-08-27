@@ -4,7 +4,7 @@
     plane in the orientation of the given coord (should be 1, 2, or 3)
 %}
 function tree = const_tree(points, coord)
-    dim = 2;
+    dim = 3;
     if coord > dim
         tree = 'PROBLEM';
         return;
@@ -16,6 +16,7 @@ function tree = const_tree(points, coord)
     [root, left, right] = split(points, coord);
     tree = KDTree();
     tree.root = root;
+    tree.axis = coord;
     if ~isempty(left)
         tree.left = const_tree(left, mod(coord, dim)+1);
     end
