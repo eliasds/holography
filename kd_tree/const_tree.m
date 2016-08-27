@@ -4,6 +4,7 @@
     plane in the orientation of the given coord (should be 1, 2, or 3)
 %}
 function tree = const_tree(points, coord)
+    %TODO deal with a [NaN, NaN, NaN] point
     dim = 3;
     if coord > dim
         tree = 'PROBLEM';
