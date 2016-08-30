@@ -8,12 +8,14 @@ classdef KDTree
         left
         right
         dim
+        index       %Index in original array during creation
     end
     methods
         function obj = KDTree()
             obj.root = -1;      %Or nan
             obj.axis = -1;
             obj.dim = 3;
+            obj.index = -1;
             obj.left = [];
             obj.right = [];
         end

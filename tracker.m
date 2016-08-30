@@ -27,13 +27,14 @@ for i = 1:length(xyzLocScaled)
 end
 
 %Initialize struct array, with all particles in frame 1 + 2
-%Structure array is an array of self made objects-- . creates a new field
 particles = struct([]);
 init = xyzLocScaled(1).time;        %Init is an array of tuples at first time t = 1: [(x, y, z)]
 for i = 1:size(init,1)              %For each particle...
     particles(i).pos(1,:) = init(i,:);      %Add a particle to the particles array with position given by init(i, :) (which is the initial (x, y, z) coord of the particle)
     particles(i).match(1,1) = 0;
 end
+
+%For init also need to buffer
 
 %Particles are rows in the xyzLocScaled(i).time matrix: To get particle 5's
 %(x, y, z) coords at time 2, do xyzLocScaled(2).time(5, :)
@@ -43,125 +44,96 @@ end
 
 %Go through each frame, tracking particles
 multiWaitbar('Tracking Particles...',0);
-for La = 2:length(xyzLocScaled)
-    mat1 = xyzLocScaled(La-1).time;     %Previous list of particle locations
-    mat2 = xyzLocScaled(La).time;       %Current list of particle locations
-    [m,~] = size(mat1);     %Use ~ because mat1 will be m x 3 in size (Location is a 3 tuple)
-    [n,~] = size(mat2);
-    %m is # of particles in first frame and n is # of particles in second
-    %not equal iff a particle drifted off the screen
+for frame = 2:length(xyzLocScaled)
+    cur_particles = xyzLocScaled(frame).time;       %Current list of particle locations
+    [n,~] = size(cur_particles);
     
-    %Init k-d tree
-    tree = const_tree(mat2, 1);
-    
-    %{
-    %Creates distance matrix between every particle in frame L and L + 1
-    dist_mat = nan(m,n);
-%     multiWaitbar('Creating Distance Matrix Between Frames Adjacent Frames...',0);
-    for M = 1:m
-        for N = 1:n
-            dist_mat(M,N) = sqrt((mat1(M,1)-mat2(N,1))^2 + ...      %The 1 gets the x coords
-                (mat1(M,2)-mat2(N,2))^2 + (mat1(M,3)-mat2(N,3))^2);         %The 2 gets the y coords, 3 gets z
-        end
-%         multiWaitbar('Creating Distance Matrix Between Frames Adjacent Frames...',M/m);
+    particle_mat = nan(length(particles), 4);       %3 space dims + 1 index dim
+    multiWaitbar('Creating Particle Matrix...',0);
+    for i = 1:length(particles)
+       particle_mat(i, 4) = i;          %Store index
+       positions = particles(i).pos;            %Particle positions
+       %Add something for init
+       last_pos = positions(frame - 1, :);
+       if ~isempty(last_pos) %Particle exists at current time
+           particle_mat(i, 1:3) = last_pos;
+           continue             %Done with this particle
+       end
+       %Now add blinking particles
+       %Look back on each frame through blink_keep frames
+       blinking = 0;
+       for j = 1:blink_keep
+           if frame - (j+1) > 0         %Make sure it stays within time's domain
+               blink_pos = positions(frame - (j+1), :);
+               if ~is_empty(blink_pos)
+                   particle_mat(i, 1:3) = blink_pos;
+                   blinking = 1;
+                   break
+               end
+           end
+       end
+       %If you don't find it, set it to nan, nan, nan
+       if ~blinking
+           particle_mat(i, 1:3) = nan(1, 3);
+       end
+    %   particle_mat(i, 4) = i;
+       multiWaitbar('Creating Particle Matrix...',i / length(particles));
     end
+    pmat = strip_nans(particle_mat, 3);
+    tree = const_tree(pmat, 1);     %Matrix of all particles and last positions found
+    %TODO make const_tree filter out NaN's
+    %Also make the tree store the index that the particle was at
+    %   Maybe: index tree by adding a 4th column from 1...n
     
-    %}
-    
-    %Thresholds + finds match
-    % dist_mat_logic is an array with bool values
-    dist_mat_logic = dist_mat < dist_thresh;
-    
-    %Copies particle positions for the next #(blink_keep) frames
-    %(there is room here for speed improvements)
-    multiWaitbar('Filling in data for blinking particles...',0);
-    for j = 1:length(particles)
-        repeat = 0;
-        for i = 1:blink_keep
-            particles(j).pos(La+i-1,:) = nan(1,3);
-            particles(j).match(La+i-1,1) = 0;
-            
-            if La-i > 0 && particles(j).match(La-i,1) == 1
-                repeat = 1;
-            end
-        end
-        
-        if repeat
-            particles(j).match(La,1) = 0;
-            particles(j).pos(La,:) = particles(j).pos(La-1,:);
-        end
-        multiWaitbar('Filling in data for blinking particles...',j/length(particles));
-    end
-    
-    %What does this loop do? Creates a new distance matrix including blinking particles?
-    partLength = length(particles);
-    dist = zeros(n, partLength);
-    keep = ones(partLength,1);
-    multiWaitbar('Creating NEW Distance Matrix Between Adjacent Frames...',0);
-    for j = 1:partLength
-        for i = 1:n
-            dist(i,j) = sqrt((particles(j).pos(La-1,1)-mat2(i,1))^2 + ...
-                (particles(j).pos(La-1,2)-mat2(i,2))^2 + ...
-                (particles(j).pos(La-1,3)-mat2(i,3))^2);
-        end
-        for k = 1:blink_keep
-            if La-k > 0 && ~particles(j).match(La-k,1)
-                keep(j,1) = keep(j,1) + 1;
-            end
-        end
-        multiWaitbar('Creating NEW Distance Matrix Between Adjacent Frames...',j/partLength);
-    end
-            
-    
-    %Append matches in L+1 to corresponding particles or adds them as new particles
-    partLength = length(particles);
-%     multiWaitbar('Match Particles from Previous Frame...',0);
-    for i = 1:n
-        isInMatch = 0;  
-        index = find(dist_mat_logic(:,i));
-        min_z = abs(mat2(i,3) - mat1(index,3));
-        [~,minInd] = min(min_z);
-        
-        dist_logic = dist(i,:)' < keep*dist_thresh;
-        distIndex = find(dist_logic);
-        keepMatch = 0;
-        for j = 1:partLength
-            
-            if ~isempty(distIndex) && ~particles(j).match(La-1,1)
-                for k = 1:length(distIndex)
-                    if distIndex(k) == j
-                        keepMatch = 1;
-                    end
-                end
-            end
-                
-            %If match, record index of particle in particles
-            if keepMatch || (~isempty(index) && isequal(mat1(index(minInd),:), particles(j).pos(La-1,:)))
-                isInMatch = 1; 
-                ind = j;
-                break
-            end
-        end        
-        
-        if isInMatch
-            particles(ind).pos(La,:) = mat2(i,:);
-            particles(ind).match(La,1) = 1;
+    multiWaitbar('Searching for Nearest Neighbors...',0);
+    for i = 1:n         %For each particle in the current frame
+        part = cur_particles(i, :);     %current particle
+        [nn, index] = nearest_neighbor(tree, part, Data(nan), Data(realmax), Data(-1));   %TODO index is the index of the particle matrix nn is at
+        dist = sqrt(sum(nn-part).^2);
+        if dist < dist_thresh
+            %This is good, then we add it to the matrix at index
+            particles(index).pos(frame, :) = part;
+            particles(index).match(frame, 1) = 1;
         else
-            particles(end+1).pos(1:La-1,:) = nan(La-1,3);
-            particles(end).match(1:La,1) = zeros(La,1);
-            particles(end).pos(La,:) = mat2(i,:);
+            %New particle, so we add it to the matrix
+            particles(end+1).pos(1:frame-1,:) = nan(frame-1,3);     %Add particle
+            particles(end).match(1:frame,1) = zeros(frame,1);
+            particles(end).pos(frame,:) = part;
         end
-%         multiWaitbar('Match Particles from Previous Frame...',i/n);
+        multiWaitbar('Searching for Nearest Neighbors...',i / n);
     end
-    multiWaitbar('Tracking Particles...',La/length(xyzLocScaled));
-
+    
+    for i = 1:size(particles, 2)        %Now see if the particle vanished-- if it did we want nans
+        if size(particles(i).pos, 1) < frame
+            %Fill it with nans
+            particles(i).pos = [particles(i).pos ; nan, nan, nan];
+        end
+    end
+    
+    %Now go through and pad the fields for deleted particles
+    for i = i:length(particles)
+       if size(particles(i).pos, 1) < (frame - 1)
+           particles(i).pos()
+       end
+    end
+    
+    
+    multiWaitbar('Tracking Particles...',frame/length(xyzLocScaled));
 end
-
-partLength = length(particles); 
-
+    
+    %Should make a k-d tree for the particles in particles instead
+    %Add blinking particles
+    %Then find nearest particle in particles to each particle in the
+    %current frame
+    %Save the index, and add the info
+    %If the nearest particle's distance is > dist_thresh, then we probably
+    %have a new particle and instead we add it to the end of the particle
+    %array
+    
 %Remove particles that appear less than appear_thresh
 multiWaitbar('Removing Neglegible Particles and Correcting Data for Blinking Particles...',0);
-index = 1; 
+index = 1;
+partLength = length(particles);
 for i = 1:partLength
     if sum(particles(index).match) < appear_thresh
         particles(index) = [];
@@ -188,20 +160,20 @@ end
 %Store particles as fn of time (to plot)
 numofframes = length(xyzLocScaled);
 multiWaitbar('Reformatting Particle Data...',0);
-for La = 1:length(particles)
-    particles(La).pos(:,3) = particles(La).pos(:,3)*scale;
+for frame = 1:length(particles)
+    particles(frame).pos(:,3) = particles(frame).pos(:,3)*scale;
 end
-for La = 1:numofframes
+for frame = 1:numofframes
     index = 1;
-    xyzLocTracked(La).time = [];
+    xyzLocTracked(frame).time = [];
     for Lb = 1:length(particles)
-        if ~isempty(particles(Lb).pos) && ~isnan(particles(Lb).pos(La,1))
-            xyzLocTracked(La).time(index,1:3) = particles(Lb).pos(La,1:3);
-            xyzLocTracked(La).time(index,4) = Lb;
+        if ~isempty(particles(Lb).pos) && ~isnan(particles(Lb).pos(frame,1))
+            xyzLocTracked(frame).time(index,1:3) = particles(Lb).pos(frame,1:3);
+            xyzLocTracked(frame).time(index,4) = Lb;
             index = index + 1;
         end
     end
-    multiWaitbar('Reformatting Particle Data...',La/numofframes);
+    multiWaitbar('Reformatting Particle Data...',frame/numofframes);
 end
 
 

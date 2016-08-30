@@ -1,4 +1,3 @@
-
 %{
     Splits a group of data to find the root of a k-d tree according to an
     initial splitting plane in the orientation of the ith coordinate
