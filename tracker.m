@@ -11,7 +11,7 @@ blink_keep = 5;     % number of frames to search for missing/blinking particle
 smoothparam = [0.003 0.003 0.0005]; % Spline Smoothing parameter between 0 and 1; Zero being a straight line.
 
 tic
-scale = 15; %weights z axis less than x and y when looking for nearest neighbor
+scale = 1; %15, weights z axis less than x and y when looking for nearest neighbor
 multiWaitbar('closeall');
 clear xyzLocTracked
 try
@@ -41,6 +41,13 @@ end
 
 %Now particles has one entry for each particle in the first frame with (x,
 %y, z) coords in the position field and match as 0
+
+%Seems like mine is more dependent on z position than Dan's-- when I change
+%the scale, it gets less accurate to his. I think that making the scale too
+%big can actually mess his up though-- In xyzLoc(2).time, there are [.0003,
+%.0006, .007] and [.0003, .0006, .0075]. Dan's tracks the [.0003, .0006,
+%.007] to the [.0003, .0006, .0075] while mine tracks it to the [.0003,
+%.0006, .007] which seems more correct. Try on scale = 100 for this result
 
 %Go through each frame, tracking particles
 multiWaitbar('Tracking Particles...',0);
@@ -81,15 +88,14 @@ for frame = 2:length(xyzLocScaled)
     end
     pmat = strip_nans(particle_mat, 3);
     tree = const_tree(pmat, 1);     %Matrix of all particles and last positions found
-    %TODO make const_tree filter out NaN's
-    %Also make the tree store the index that the particle was at
-    %   Maybe: index tree by adding a 4th column from 1...n
     
     multiWaitbar('Searching for Nearest Neighbors...',0);
     for i = 1:n         %For each particle in the current frame
         part = cur_particles(i, :);     %current particle
-        [nn, index] = nearest_neighbor(tree, part, Data(nan), Data(realmax), Data(-1));   %TODO index is the index of the particle matrix nn is at
-        dist = sqrt(sum(nn-part).^2);
+        [nn, index] = nearest_neighbor(tree, part, Data(nan), Data(realmax), Data(-1));
+        dist = sqrt(sum(nn-part).^2);       %Cartesian metric
+        %More dependent on (x, y), so only focus on x and y
+    %    dist = sqrt((nn(1)-(part(1)))^2 + (nn(2)-part(2))^2);
         if dist < dist_thresh
             %This is good, then we add it to the matrix at index
             particles(index).pos(frame, :) = part;
