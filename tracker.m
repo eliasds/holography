@@ -11,7 +11,7 @@ blink_keep = 5;     % number of frames to search for missing/blinking particle
 smoothparam = [0.003 0.003 0.0005]; % Spline Smoothing parameter between 0 and 1; Zero being a straight line.
 
 tic
-scale = 1; %15, weights z axis less than x and y when looking for nearest neighbor
+scale = 15; %15, weights z axis less than x and y when looking for nearest neighbor
 multiWaitbar('closeall');
 clear xyzLocTracked
 try
@@ -55,10 +55,24 @@ for frame = 2:length(xyzLocScaled)
     cur_particles = xyzLocScaled(frame).time;       %Current list of particle locations
     [n,~] = size(cur_particles);
     
+    %{
+        TODO
+        The problem is in the cases that the algorithm doesn't select the
+        nearest neighbor-- more dependent on (x, y) than on z. Might screw
+        up nearest neighbor search
+        Should create some sort of a flag when they're used so that no
+        particles are reused
+        That will create a problem when the nearest neighbor blinks though
+        Need to think this through and refine it
+    %}
+    
     particle_mat = nan(length(particles), 4);       %3 space dims + 1 index dim
-    multiWaitbar('Creating Particle Matrix...',0);
+ %   multiWaitbar('Creating Particle Matrix...',0);
+    for j = 1:length(particles)
+        particle_mat(j, 4) = j;
+    end
     for i = 1:length(particles)
-       particle_mat(i, 4) = i;          %Store index
+    %   particle_mat(i, 4) = i;          %Store index
        positions = particles(i).pos;            %Particle positions
        %Add something for init
        last_pos = positions(frame - 1, :);
@@ -84,7 +98,7 @@ for frame = 2:length(xyzLocScaled)
            particle_mat(i, 1:3) = nan(1, 3);
        end
     %   particle_mat(i, 4) = i;
-       multiWaitbar('Creating Particle Matrix...',i / length(particles));
+ %      multiWaitbar('Creating Particle Matrix...',i / length(particles));
     end
     pmat = strip_nans(particle_mat, 3);
     tree = const_tree(pmat, 1);     %Matrix of all particles and last positions found
@@ -126,16 +140,7 @@ for frame = 2:length(xyzLocScaled)
     
     multiWaitbar('Tracking Particles...',frame/length(xyzLocScaled));
 end
-    
-    %Should make a k-d tree for the particles in particles instead
-    %Add blinking particles
-    %Then find nearest particle in particles to each particle in the
-    %current frame
-    %Save the index, and add the info
-    %If the nearest particle's distance is > dist_thresh, then we probably
-    %have a new particle and instead we add it to the end of the particle
-    %array
-    
+
 %Remove particles that appear less than appear_thresh
 multiWaitbar('Removing Neglegible Particles and Correcting Data for Blinking Particles...',0);
 index = 1;

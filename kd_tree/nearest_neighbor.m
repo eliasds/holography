@@ -8,7 +8,7 @@ function [ particle, index ] = nearest_neighbor( tree, point, best, R, best_inde
 %   @param R is the current closest radius. Default with R = Data(realmax)
 %   @return particle 3-tuple representing [x, y, z] location of particle
 %   @return index the index of the particle from the original matrix
-if isempty(tree) | tree.root == -1
+if isempty(tree) || tree.root == -1
     return
 end
 root = tree.root;
