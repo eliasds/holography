@@ -1,11 +1,13 @@
-function [ xyz ] = simulation( n, dt, frames, size )
+function [ xyz ] = simulation( n, dt, frames )
 %SIMULATION Simulates n particles moving in an environment
 %   @param n number of particlees to simulate
-%   @param dt time of each interval
-%   @param frames total number of frames to take
-%   @param size size of the environment to create, try .001
+%   @param dt time of each interval, ~.01
+%   @param frames total number of frames to take, ~60
+%   @param size size of the environment to create, ~ .001
 %   @return xyz struct with xyz locations. xyz(i).time gets array n x
 %       3 array of particles moving in the environment
+
+size = .001;
 
 xyz = struct([]);
 
@@ -31,13 +33,18 @@ for i = 1:n
 end
 
 for frame = 1:frames
-  %  xyz(frame).time = nan(n, 3);        %Store info about the particles
-    xyz(frame).time = x;
-    %Now, reset x by v
-    x = x + v *dt;
-%    v = v .* 2*sin(frame);
+    %Add in permutation of the x matrix
+    permute = randperm(n);
+    xyz(frame).time = x(permute, :);
+    
+    %TODO take away particles to simulate blinking
+    
+    
+    %update x and v
+    x = x + v *dt;                      %Move particle
+    v = v + v * .02*sin(frame*rand);           %Modify v slightly each time
+    %Make sure don't change by too much or it might lose the particle
 end
-
 
 end
 
