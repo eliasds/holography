@@ -69,10 +69,9 @@ for frame = 2:length(xyzLocScaled)
     particle_mat = nan(length(particles), 4);       %3 space dims + 1 index dim
  %   multiWaitbar('Creating Particle Matrix...',0);
     for j = 1:length(particles)
-        particle_mat(j, 4) = j;
+        particle_mat(j, 4) = j;     %Store index
     end
     for i = 1:length(particles)
-    %   particle_mat(i, 4) = i;          %Store index
        positions = particles(i).pos;            %Particle positions
        %Add something for init
        last_pos = positions(frame - 1, :);
