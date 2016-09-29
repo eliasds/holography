@@ -1,8 +1,9 @@
 function [ xyz, blinking ] = simulation( n, dt, frames, blink )
 %SIMULATION Simulates n particles moving in an environment
-%   @param n number of particlees to simulate
+%   @param n number of particles to simulate
 %   @param dt time of each interval, ~.01
 %   @param frames total number of frames to take, ~60
+%   @param blink whether or not to blink
 %   @return xyz struct with xyz locations. xyz(i).time gets array n x
 %       3 array of particles moving in the environment
 
@@ -10,7 +11,8 @@ size = .001;        %size of environment to start at
 
 xyz = struct([]);
 blinking = struct([]);
-numBlink = round(n * .1);
+ratio = .1;         %Percentage of particles to blink
+numBlink = round(n * ratio);
 
 %Create x, v, a (maybe not a) -- nx1 vectors
 
