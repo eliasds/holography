@@ -66,6 +66,7 @@ for frame = 2:length(xyzLocScaled)
         Need to think this through and refine it
     %}
     
+    %Set up particle matrix to turn into kd tree
     particle_mat = nan(length(particles), 4);       %3 space dims + 1 index dim
  %   multiWaitbar('Creating Particle Matrix...',0);
     for j = 1:length(particles)
@@ -77,8 +78,12 @@ for frame = 2:length(xyzLocScaled)
        last_pos = positions(frame - 1, :);
        if ~isempty(last_pos) %Particle exists at current time
            particle_mat(i, 1:3) = last_pos;
+           particles(i).match = 1;
            continue             %Done with this particle
+       else
+           particles(i).match = 0;      %Might not even need this
        end
+       %{
        %Now add blinking particles
        %Look back on each frame through blink_keep frames
        blinking = 0;
@@ -98,10 +103,13 @@ for frame = 2:length(xyzLocScaled)
        end
     %   particle_mat(i, 4) = i;
  %      multiWaitbar('Creating Particle Matrix...',i / length(particles));
+       %}
     end
-    pmat = strip_nans(particle_mat);
-    tree = const_tree(pmat, 1);     %Matrix of all particles and last positions found
+    pmat = strip_nans(particle_mat, 4);
+    tree = const_tree(pmat, 1);     %Matrix of all particles in previous frame
     
+    noMatch = nan(length(particles), 3);
+    noMatchIndex = 1;
     multiWaitbar('Searching for Nearest Neighbors...',0);
     for i = 1:n         %For each particle in the current frame
         part = cur_particles(i, :);     %current particle
@@ -114,12 +122,33 @@ for frame = 2:length(xyzLocScaled)
             particles(index).pos(frame, :) = part;
             particles(index).match(frame, 1) = 1;
         else
+            %Didn't find the nearest particle, so check for blinking
+            noMatch(noMatchIndex, :) = part;
+            noMatchIndex = noMatchIndex + 1;
+            %{
             %New particle, so we add it to the matrix
             particles(end+1).pos(1:frame-1,:) = nan(frame-1,3);     %Add particle
             particles(end).match(1:frame,1) = zeros(frame,1);
             particles(end).pos(frame,:) = part;
+            %}
         end
         multiWaitbar('Searching for Nearest Neighbors...',i / n);
+    end
+    noMatch = strip_nans(noMatch, 3);      %Get rid of nans
+    notFound = struct([]);
+    %DO BLINKING STUFF HERE
+    for i = 1:length(particles)
+        if particles(frame).match(i)
+            continue;
+        end
+        for f = frame-blink_keep : frame-1
+            if f <= 0
+                continue;
+            end
+            if particles(f).match(i)
+                
+            end
+        end
     end
     
     for i = 1:size(particles, 2)        %Now see if the particle vanished-- if it did we want nans
