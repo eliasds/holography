@@ -76,9 +76,9 @@ for frame = 2:length(xyzLocScaled)
        positions = particles(i).pos;            %Particle positions
        %Add something for init
        last_pos = positions(frame - 1, :);
-       if ~isempty(last_pos) %Particle exists at current time
+       if ~isempty(last_pos) %Particle exists in last frame
            particle_mat(i, 1:3) = last_pos;
-           particles(i).match = 1;
+           particles(i).match = 1;      %TODO why do we set match here?
            continue             %Done with this particle
        else
            particles(i).match = 0;      %Might not even need this
@@ -114,7 +114,7 @@ for frame = 2:length(xyzLocScaled)
     for i = 1:n         %For each particle in the current frame
         part = cur_particles(i, :);     %current particle
         [nn, index] = nearest_neighbor(tree, part, Data(nan), Data(realmax), Data(-1));
-        dist = sqrt(sum(nn-part).^2);       %Cartesian metric
+        dist = sqrt(sum((nn-part).^2));       %Cartesian metric
         %More dependent on (x, y), so only focus on x and y
     %    dist = sqrt((nn(1)-(part(1)))^2 + (nn(2)-part(2))^2);
         if dist < dist_thresh
@@ -134,22 +134,56 @@ for frame = 2:length(xyzLocScaled)
         end
         multiWaitbar('Searching for Nearest Neighbors...',i / n);
     end
+    
+    %DO BLINKING STUFF HERE
     noMatch = strip_nans(noMatch, 3);      %Get rid of nans
     notFound = struct([]);
-    %DO BLINKING STUFF HERE
+    nfIndex = 1;
     for i = 1:length(particles)
-        if particles(frame).match(i)
+        if particles(i).match(frame, 1)        %Only take particles that don't have a match
             continue;
         end
-        for f = frame-blink_keep : frame-1
-            if f <= 0
-                continue;
+        if frame - blink_keep < 1
+            minFrame = 1;
+        else
+            minFrame = frame - blink_keep;
+        end
+        f = frame - 1;
+        while f >= minFrame
+            if particles(i).match(f, 1)        %get last known occurence of particle
+                %Then we want f+1... or do we want f?
+                notFound(nfIndex).pos = [particles(f).pos, nfIndex];     %f or f+1
+                notFound(nfIndex).frame = f;    %f or f+1
+                notFound(nfIndex).part_number = i;
+                nfIndex = nfIndex + 1;
+                break;
             end
-            if particles(f).match(i)
-                
-            end
+            f = f - 1;
         end
     end
+    
+    nfTree = const_tree(notFound.pos);
+    
+    %Iterate through noMatch and find nearest neighbor
+    for i = 1:size(noMatch, 1)
+        %noMatch(i, :) is the 3-tuple with (x, y, z)
+        part = noMatch(i, :);
+        [nn, index] = nearest_neighbor(nfTree, part, Data(nan), Data(realmax), Data(-1));
+        d = sqrt(sum((nn-part).^2));
+        k = frame - not_found(index).frame;       %Number of frames back
+        new_thresh = k*dist_thresh;
+        if d < new_thresh
+            pIndex = notFound(index).frame;
+            particles(pIndex).pos(frame, :) = nn(1, 1:3);
+            particles(pIndex).match(frame, 1) = 1;
+        else
+            %add particle to particles
+            particles(end+1).pos = part;
+            particles(end).match = 1;
+        end
+    end
+    
+    %End blinking
     
     for i = 1:size(particles, 2)        %Now see if the particle vanished-- if it did we want nans
         if size(particles(i).pos, 1) < frame
