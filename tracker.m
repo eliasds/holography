@@ -169,6 +169,7 @@ for frame = 2:length(xyzLocScaled)
         end
         f = frame - 1;
         while f >= minFrame
+            %if ~particles(i).match(f, 1) && ~isnan(particles(i).pos(f, 1))
             if ~particles(i).match(f, 1)        %Get particle if it hasn't been matched yet
                 %Then we want f+1... or do we want f?
                 %notFound(nfIndex).pos = [particles(f).pos, nfIndex];     %f or f+1
@@ -185,7 +186,14 @@ for frame = 2:length(xyzLocScaled)
     if isempty(notFound) 
         continue;
     end
-    nfTree = const_tree(notFound.pos);
+    %notFound.pos returns 3 different vectors-- have to convert to an array
+    %points = structToArray(notFound.pos);
+    points = nan(size(notFound, 2), 4);
+    for k = 1:size(notFound, 2)
+        points(k, :) = notFound(k).pos;
+    end
+    %nfTree = const_tree(notFound.pos, 1);
+    nfTree = const_tree(points, 1);
     
     %Iterate through noMatch and find nearest neighbor
     for i = 1:size(noMatch, 1)
@@ -193,7 +201,7 @@ for frame = 2:length(xyzLocScaled)
         part = noMatch(i, :);
         [nn, index] = nearest_neighbor(nfTree, part, Data(nan), Data(realmax), Data(-1));
         d = sqrt(sum((nn-part).^2));
-        k = frame - not_found(index).frame;       %Number of frames back
+        k = frame - notFound(index).frame;       %Number of frames back
         new_thresh = k*dist_thresh;
         if d < new_thresh
             pIndex = notFound(index).frame;
@@ -202,8 +210,8 @@ for frame = 2:length(xyzLocScaled)
         else
             %add particle to particles
             particles(end+1).pos(frame, :) = part;
-            particles(end).match(1:frame-1,1) = zeros(frame,1);
-            particles(end).match(frame, 1) = 1;
+            particles(end).match(1:frame-1,1) = zeros(frame-1,1);       %Or ones?
+            %particles(end).match(frame, 1) = 1;
         end
     end
     
