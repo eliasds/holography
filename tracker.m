@@ -52,26 +52,32 @@ while initIndex <= size(init, 1)
     partIndex = partIndex + 1;
 end
 
-%For init also need to buffer
+%{
+For init also need to buffer
 
-%Particles are rows in the xyzLocScaled(i).time matrix: To get particle 5's
-%(x, y, z) coords at time 2, do xyzLocScaled(2).time(5, :)
+Particles are rows in the xyzLocScaled(i).time matrix: To get particle 5's
+(x, y, z) coords at time 2, do xyzLocScaled(2).time(5, :)
 
-%Now particles has one entry for each particle in the first frame with (x,
-%y, z) coords in the position field and match as 0
+Now particles has one entry for each particle in the first frame with (x,
+y, z) coords in the position field and match as 0
 
-%Seems like mine is more dependent on z position than Dan's-- when I change
-%the scale, it gets less accurate to his. I think that making the scale too
-%big can actually mess his up though-- In xyzLoc(2).time, there are [.0003,
-%.0006, .007] and [.0003, .0006, .0075]. Dan's tracks the [.0003, .0006,
-%.007] to the [.0003, .0006, .0075] while mine tracks it to the [.0003,
-%.0006, .007] which seems more correct. Try on scale = 100 for this result
+Seems like mine is more dependent on z position than Dan's-- when I change
+the scale, it gets less accurate to his. I think that making the scale too
+big can actually mess his up though-- In xyzLoc(2).time, there are [.0003,
+.0006, .007] and [.0003, .0006, .0075]. Dan's tracks the [.0003, .0006,
+.007] to the [.0003, .0006, .0075] while mine tracks it to the [.0003,
+.0006, .007] which seems more correct. Try on scale = 100 for this result
 
-%Go through each frame, tracking particles
-%multiWaitbar('Tracking Particles...',0);
+Go through each frame, tracking particles
+multiWaitbar('Tracking Particles...',0);
+
+%}
+notFound = struct([]);
+%Will have fields pos (of [x, y, z]), frame (frame lost in), and index (in particles)
+
 for frame = 2:length(xyzLocScaled)
     cur_particles = xyzLocScaled(frame).time;       %Current list of particle locations
-    [n,~] = size(cur_particles);
+    [n, ~] = size(cur_particles);
     
     %Set up particle matrix to turn into kd tree
     particle_mat = nan(length(particles), 4);       %3 space dims + 1 index dim
@@ -81,44 +87,20 @@ for frame = 2:length(xyzLocScaled)
     end
     for i = 1:length(particles)
        positions = particles(i).pos;            %Particle positions
-       %Add something for init
        last_pos = positions(frame - 1, :);
-        %CHANGE TO ~isnan(last_pos)?
-       %if ~isempty(last_pos) %Particle exists in last frame
+       %TODO CHECK THIS IS A GOOD PADDING OF PARTICLES
+       particles(i).pos(frame, :) = nan(1, 3);
+       particles(i).match(frame-1, 1) = 0;
        if ~isnan(last_pos)
            particle_mat(i, 1:3) = last_pos;
-           particles(i).match(frame-1, 1) = 0;  %frame or frame-1?
-%           continue;             %Done with this particle
-%       else
-%           particles(i).match(frame, 1) = 0;      %Might not even need this
        end
-       %{
-       %Now add blinking particles
-       %Look back on each frame through blink_keep frames
-       blinking = 0;
-       for j = 1:blink_keep
-           if frame - (j+1) > 0         %Make sure it stays within time's domain
-               blink_pos = positions(frame - (j+1), :);
-               if ~is_empty(blink_pos)
-                   particle_mat(i, 1:3) = blink_pos;
-                   blinking = 1;
-                   break
-               end
-           end
-       end
-       %If you don't find it, set it to nan, nan, nan
-       if ~blinking
-           particle_mat(i, 1:3) = nan(1, 3);
-       end
-    %   particle_mat(i, 4) = i;
- %      multiWaitbar('Creating Particle Matrix...',i / length(particles));
-       %}
     end
     pmat = strip_nans(particle_mat, 4);
     tree = const_tree(pmat, 1);     %Matrix of all particles in previous frame
     
     noMatch = nan(length(particles), 3);
     noMatchIndex = 1;
+    
 %    multiWaitbar('Searching for Nearest Neighbors...',0);
     for i = 1:n         %For each particle in the current frame
         part = cur_particles(i, :);     %current particle
@@ -126,13 +108,10 @@ for frame = 2:length(xyzLocScaled)
             continue;
         end
         [nn, index] = nearest_neighbor(tree, part, Data(nan), Data(realmax), Data(-1));
-        dist = sqrt(sum((nn-part).^2));       %Cartesian metric
-        %More dependent on (x, y), so only focus on x and y
-    %    dist = sqrt((nn(1)-(part(1)))^2 + (nn(2)-part(2))^2);
+        dist = sqrt(sum((nn-part).^2));
         if dist < dist_thresh
             %This is good, then we add it to the matrix at index
             particles(index).pos(frame, :) = part;
-            %particles(index).match(frame, 1) = 1;
             particles(index).match(frame-1, 1) = 1;
         else
             %Didn't find the nearest particle, so check for blinking
@@ -153,15 +132,21 @@ for frame = 2:length(xyzLocScaled)
     If it has, then we don't want to use it for finding blinking particles
     because we've already found it and it would waste time and space
     %}
-    
     %BEGIN BLINKING
     noMatch = strip_nans(noMatch, 3);      %Get rid of nans
-    notFound = struct([]);
-    nfIndex = 1;
+%    notFound = struct([]);
+%    nfIndex = 1;
     for i = 1:length(particles)
-        if particles(i).match(frame-1, 1)       %Then particles have a match
+        if isnan(particles(i).pos(frame - 1, :)) | particles(i).match(frame-1, 1)        %Then particles have a match
             continue;
         end
+        %if ~particles(i).match(frame - 1)
+        notFound(end + 1).pos = particles(i).pos(frame - 1, :);
+        notFound(end).frame = frame - 1;
+        notFound(end).index = i;
+        %end
+        %Old blinking
+        %{
         if frame - blink_keep < 1
             minFrame = 1;
         else
@@ -183,6 +168,7 @@ for frame = 2:length(xyzLocScaled)
             end
             f = f - 1;
         end
+        %}
     end
     
     if isempty(notFound) 
@@ -191,12 +177,25 @@ for frame = 2:length(xyzLocScaled)
     %notFound.pos returns 3 different vectors-- have to convert to an array
     %points = structToArray(notFound.pos);
     points = nan(size(notFound, 2), 4);
+    %{
     for k = 1:size(notFound, 2)
         points(k, :) = notFound(k).pos;
     end
-    %nfTree = const_tree(notFound.pos, 1);
-    nfTree = const_tree(points, 1);
+    %}
+    k = 1;
+    while k <= size(notFound, 2)
+        if frame - notFound(k).frame > blink_keep
+            notFound(k) = [];
+        else
+            points(k, 1:3) = notFound(k).pos;
+            points(k, 4) = k;       %Store notFound index
+            k = k + 1;
+        end
+    end
     
+    nfTree = const_tree(points, 1);
+    toDel = nan(1, length(notFound));
+    toDelIndex = 1;
     %Iterate through noMatch and find nearest neighbor
     for i = 1:size(noMatch, 1)
         %noMatch(i, :) is the 3-tuple with (x, y, z)
@@ -206,19 +205,35 @@ for frame = 2:length(xyzLocScaled)
         k = frame - notFound(index).frame;       %Number of frames back
         new_thresh = k*dist_thresh;
         if d < new_thresh
-            pIndex = notFound(index).frame;
+            %pIndex = notFound(index).frame;
+            pIndex = notFound(index).index;
             particles(pIndex).pos(frame, :) = nn(1, 1:3);
-            particles(pIndex).match(frame, 1) = 1;
+            %TODO ADD particles(notFound(index).index:pIndex-1, :) = interpolate(particles(pIndex).pos(frame, :), particles(pIndex).pos(notFound(index).frame, :), frame - notFound(index).frame);
+            %particles(pIndex).match(frame, 1) = 1;
+            
+            %TODO PROBLEM: Since notFound(index) is deleted, all the
+            %indices are off by one. Hopefully this fixes it
+            %notFound(index) = [];
+            toDel(1, toDelIndex) = index;
+            toDelIndex = toDelIndex + 1;
         else
             %add particle to particles
-            particles(end+1).pos(frame, :) = part;
-            particles(end).match(1:frame-1,1) = zeros(frame-1,1);       %Or ones?
+            particles(end + 1).pos(frame, :) = part;
+            particles(end).pos(1:frame - 1, :) = nan(frame - 1, 3);
+            particles(end).match(1:frame - 1, :) = zeros(frame - 1, 1);
+            %particles(end).match(1:frame-1,1) = zeros(frame-1,1);       %Or ones?
             %particles(end).match(frame, 1) = 1;
         end
     end
     
-    %END BLINKING
+    %sort toDelIndex from largest to smallest and delete from nfIndex
+    sortedDel = reverseSort(toDel);
+    for i = 1:length(sortedDel)
+        notFound(sortedDel(i)) = [];
+    end
     
+    %END BLINKING
+    %{
     for i = 1:size(particles, 2)        %Now see if the particle vanished-- if it did we want nans
         if size(particles(i).pos, 1) < frame
             %Fill it with nans
@@ -232,6 +247,7 @@ for frame = 2:length(xyzLocScaled)
            particles(i).pos()
        end
     end
+    %}
     
     
 %    multiWaitbar('Tracking Particles...',frame/length(xyzLocScaled));
