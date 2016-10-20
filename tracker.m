@@ -168,8 +168,10 @@ for frame = 2:length(xyzLocScaled)
             minFrame = frame - blink_keep;
         end
         f = frame - 1;
+        %TODO start at minFrame and go up to f-1
         while f >= minFrame
             %if ~particles(i).match(f, 1) && ~isnan(particles(i).pos(f, 1))
+            %Why this if statement? Shouldn't it be a tautology?
             if ~particles(i).match(f, 1)        %Get particle if it hasn't been matched yet
                 %Then we want f+1... or do we want f?
                 %notFound(nfIndex).pos = [particles(f).pos, nfIndex];     %f or f+1
