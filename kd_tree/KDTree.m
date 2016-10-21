@@ -1,6 +1,5 @@
 classdef KDTree
-    %UNTITLED4 Summary of this class goes here
-    %   Detailed explanation goes here
+    %Implementation of a KD Tree. TODO support nodes
     
     properties
         root
