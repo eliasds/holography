@@ -237,14 +237,14 @@ end
 %% Setup secondary constants and variables
 %
 % Constants to save
-namesofconstants = {'xyzLoc','OutputPathStr','particlefilename','lambda','mag','maxint','ps','refractindex','zsteps','zstepsize','thlevel','vortloc','z0','z1','z2','z3','z4','rect_xydxdy','top','bottom','mask','derstr','thparam','th','th_all','minmean','earlycropregion','earlycropflag','detectcropflag','greyoutregion','greyoutflag'};
+namesofconstants = {'xyzLoc','OutputPathStr','particlefilename','lambda','mag','maxint','ps','refractindex','zsteps','zstepsize','thlevel','vortloc','z0','z1','z2','z3','z4','rect_xydxdy','top','bottom','mask','derstr','thparam','th','th_all','minmean','earlycropregion','earlycropflag','detectcropflag','greyoutregion','greyoutflag','fps','framerate'};
 [~,nocorder] = sort(lower(namesofconstants));
 namesofconstants = namesofconstants(nocorder);
 
 
 Z = linspace(z1,z2,zsteps);
 loop = 0;
-
+fps = framerate;
 
 % List files to import
 filename = strcat(dirname,filename);
