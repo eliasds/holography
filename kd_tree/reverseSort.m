@@ -4,7 +4,9 @@ function [ lst ] = reverseSort( lst )
 %   @param  sortable        a 1xn row vector of ints
 %   @return                 sorted from highest to lowest with no nans
 
-for i = 1:length(lst)
+size = length(lst);
+for i = 1:size
+    %TODO remove repeats
     max = lst(i);
     init = max;
     if isnan(max)
@@ -25,6 +27,13 @@ for i = 1:length(lst)
     lst(i) = max;
     lst(index) = init;
 end
+
+for i = length(lst) : -1 : 2
+    if lst(i) == lst(i-1)
+        lst(i) = [];
+    end
+end
+
 
 end
 

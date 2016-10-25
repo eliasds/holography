@@ -42,12 +42,12 @@ while initIndex <= size(init, 1)
     partIndex = partIndex + 1;
 end
 
-%multiWaitbar('Tracking Particles...',0);
 
 notFound = struct([]);
 %Will have fields pos (of [x, y, z]), frame (frame lost in), and index (in particles)
-
-for frame = 2:length(xyzLocScaled)
+multiWaitbar('Tracking Particles...',0);
+numFrames = length(xyzLocScaled);
+for frame = 2:numFrames
     cur_particles = xyzLocScaled(frame).time;       %Current list of particle locations
     [n, ~] = size(cur_particles);
     
@@ -140,6 +140,14 @@ for frame = 2:length(xyzLocScaled)
             %notFound(index) = [];
             toDel(1, toDelIndex) = index;
             toDelIndex = toDelIndex + 1;
+            %TODO delete particle from k-d tree. Implement remove
+            %{
+                Problem is that two of the particles in noMatch are very 
+                close to one another, and they find the same particle in
+                notFound. After I delete the particle from notFound, it 
+                tries to again delete the same index, which causes an
+                index out of bounds error
+            %}
         else
             %add particle to particles
             particles(end + 1).pos(frame, :) = part;
@@ -155,7 +163,7 @@ for frame = 2:length(xyzLocScaled)
     end
     
     %END BLINKING
-%    multiWaitbar('Tracking Particles...',frame/length(xyzLocScaled));
+    multiWaitbar('Tracking Particles...',frame/numFrames);
 end
 
 %Remove particles that appear less than appear_thresh
