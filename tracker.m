@@ -7,7 +7,7 @@
     
 dist_thresh = 15E-6;   %TODO work with this; diameter (in meters) in which to search for particle in next frame
 appear_thresh = 8; % remove particles that apear for less than this number of frames
-blink_keep = 5;     % number of frames to search for missing/blinking particle
+blink_keep = 10;     % number of frames to search for missing/blinking particle
 smoothparam = [0.003 0.003 0.0005]; % Spline Smoothing parameter between 0 and 1; Zero being a straight line.
 
 tic
