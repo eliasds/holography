@@ -42,7 +42,7 @@ classdef KDTree
            end
         end
         
-        function tree = del(tree, point)
+        function tree = del(tree, point, coord)
            %TODO method stub 
         end
     end
