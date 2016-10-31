@@ -76,7 +76,7 @@ zstepsize=5e-6;
 zsteps=1+(z2-z1)/zstepsize;
 top = 1;
 bottom = 1024;
-rect_xydxdy = [1,1,1023,1023];
+rect_xydxdy = [0 0 0 0];
 thlevel = 0.2;
 thparam = 0.333;
 derstr = 'R8D5E4';
@@ -138,24 +138,25 @@ while ~isempty(varargin)
             
         case {'DETECTIONCROP','LATECROP'}
             detectcropflag = true;
-            if numel(varargin{2}) ~= 4
-                rect_xydxdy_copy = [(varargin{2}(1:2)), 1023,1023];
-            else
-                rect_xydxdy_copy = [varargin{2}];
-            end
+            detectcropregion = varargin{2};
+%             if numel(varargin{2}) ~= 4
+%                 rect_xydxdy_copy = [(varargin{2}(1:2)), 1023,1023];
+%             else
+%                 rect_xydxdy_copy = [varargin{2}];
+%             end
             varargin(1:2) = [];
             
         case 'CONSTANTS'
             constantsfile = varargin{2};
             load(constantsfile);
-                if ~exist('rect_xydxdy','var')
-                    if ~exist('rect','var')
-                        rect_xydxdy = [1 1 n m];
-                    else
-                        rect_xydxdy = rect;
-                        clear('rect');
-                    end
-                end
+%                 if ~exist('rect_xydxdy','var')
+%                     if ~exist('rect','var')
+%                         rect_xydxdy = [1 1 n m];
+%                     else
+%                         rect_xydxdy = rect;
+%                         clear('rect');
+%                     end
+%                 end
             disp(['NOW using Constants from ',constantsfile]);
             varargin(1:2) = [];
             
@@ -237,7 +238,7 @@ end
 %% Setup secondary constants and variables
 %
 % Constants to save
-namesofconstants = {'xyzLoc','OutputPathStr','particlefilename','lambda','mag','maxint','ps','refractindex','zsteps','zstepsize','thlevel','vortloc','z0','z1','z2','z3','z4','rect_xydxdy','top','bottom','mask','derstr','thparam','th','th_all','minmean','earlycropregion','earlycropflag','detectcropflag','greyoutregion','greyoutflag','fps','framerate'};
+namesofconstants = {'xyzLoc','OutputPathStr','particlefilename','lambda','mag','maxint','ps','refractindex','zsteps','zstepsize','thlevel','vortloc','z0','z1','z2','z3','z4','rect_xydxdy','top','bottom','mask','derstr','thparam','th','th_all','minmean','earlycropregion','earlycropflag','detectcropregion','detectcropflag','greyoutregion','greyoutflag','fps','framerate'};
 [~,nocorder] = sort(lower(namesofconstants));
 namesofconstants = namesofconstants(nocorder);
 
@@ -264,11 +265,11 @@ end
 HoloFile = [filesort(1, 1).name];
 varnam = who('-file',HoloFile);
 
-% Change Default Crop Parameters
-if detectcropflag == true
-    rect_xydxdy = rect_xydxdy_copy;
-%     earlycropregion = [top,top,bottom-top,bottom-top];
-end
+% % Change Default Crop Parameters
+% if detectcropflag == true
+%     rect_xydxdy = rect_xydxdy_copy;
+% %     earlycropregion = [top,top,bottom-top,bottom-top];
+% end
 
 
 % Determine maximum/mean intensity
@@ -300,7 +301,7 @@ if runparticledetectionflag == true
     end
     % Initialize movie file(s)
     if particlevideoflag==true
-        threshmov(1:numframes) = struct('cdata',zeros(rect_xydxdy(4)+1,rect_xydxdy(3)+1,3,'uint8'),'colormap',[]);
+        threshmov(1:numframes) = struct('cdata',zeros(512,512,3,'uint8'),'colormap',[]);
     end
 end
 
@@ -391,8 +392,8 @@ for L=firstframe:skipframes:lastframe
         end
         
         % Secondary crop to remove Fresnel boundary effects
-        Imin=imcrop(Imin,rect_xydxdy);
-        zmap=imcrop(zmap,rect_xydxdy);
+        Imin=imcrop(Imin,detectcropregion);
+        zmap=imcrop(zmap,detectcropregion);
 
         % Detect Particles and Save
         [Xauto,Yauto,Zauto,th,th_all] = detection3(Imin, zmap, thlevel, derstr, minmean);
