@@ -118,6 +118,18 @@ for frame = 2:numFrames
         end
     end
     
+    %{
+    Guard against bug-- points became empty, but didn't continue. 
+    Think what happened is that there were one or two particles in notFound
+    and they were all greater than blink_keep away, so it removed them 
+    from the matrix and points was null. This made the kdTree null, which
+    will return a value of -1 for all operations, hence why the indexing 
+    was throwing an error.
+    %}
+    if isnan(points)
+        continue;
+    end
+    
     nfTree = const_tree(points, 1);
     toDel = nan(1, length(notFound));
     toDelIndex = 1;
