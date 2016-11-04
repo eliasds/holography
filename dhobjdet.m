@@ -55,7 +55,7 @@ constantsfile = 'constants.mat';
 createIminfilesflag = false;
 runparticledetectionflag = true;
 gpuflag = true;
-particlevideoflag = true;
+particlevideoflag = false;
 earlycropflag = false;
 earlycropregion = [0 0 0 0];
 detectcropflag = false;
@@ -241,6 +241,9 @@ end
 namesofconstants = {'xyzLoc','OutputPathStr','particlefilename','lambda','mag','maxint','ps','refractindex','zsteps','zstepsize','thlevel','vortloc','z0','z1','z2','z3','z4','rect_xydxdy','top','bottom','mask','derstr','thparam','th','th_all','minmean','earlycropregion','earlycropflag','detectcropregion','detectcropflag','greyoutregion','greyoutflag','fps','framerate'};
 [~,nocorder] = sort(lower(namesofconstants));
 namesofconstants = namesofconstants(nocorder);
+daytimenow = datestr(now,'yyyymmddHHMMSS');
+particlefilename = [filename(1:end-1),'-th',strrep(num2str(thlevel/10,'%1.1E'),'.',''),'_derstr',derstr,'_day',daytimenow];
+
 
 
 Z = linspace(z1,z2,zsteps);
@@ -309,7 +312,8 @@ end
 %% Create Imin MAT files and run Particle Detection together
 %
 
-wb = waitbar(0/numframes,'Analysing Data for Imin and Detecting Particles');
+multiWaitbar('closeall');
+multiWaitbar('Analysing Data for Imin and Detecting Particles',0/numframes);
 
 % Main loop
 for L=firstframe:skipframes:lastframe
@@ -408,8 +412,12 @@ for L=firstframe:skipframes:lastframe
 
     end
     
-    
-    waitbar(loop/numframes,wb);
+    if runparticledetectionflag == true && mod(loop,100) == 0;
+        save([OutputPathStr,particlefilename,'.mat'],namesofconstants{:})
+    end
+
+    multiWaitbar('Analysing Data for Imin and Detecting Particles',loop/numframes);
+
 end
 
 
@@ -418,12 +426,9 @@ end
 % Ein=gather(Ein);
 % background=gather(background);
 maxint=gather(maxint);
-close(wb);
 
 
-% Save constants and particle information
-daytimenow = datestr(now,'yyyymmddHHMMSS');
-particlefilename = [filename(1:end-1),'-th',strrep(num2str(thlevel/10,'%1.1E'),'.',''),'_derstr',derstr,'_day',daytimenow];
+%% Save work
 % Create struct containing all constants
 for L = 1:length(namesofconstants)
     constants.(namesofconstants{L}) = eval(namesofconstants{L});
@@ -445,7 +450,7 @@ if runparticledetectionflag == true && particlevideoflag == true
     close(writerObj);
 end
 
-
+multiWaitbar('closeall');
 
 toc2
 
