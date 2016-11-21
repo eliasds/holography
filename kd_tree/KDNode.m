@@ -12,6 +12,9 @@ classdef KDNode
         % Right is a KDNode or nan if no right child.
         right
         
+        % Parent is a KDNode or nan if this node is the root.
+        parent
+        
         % Splitting axis. 1 -> x, 2 -> y, 3 -> z.
         axis
         
@@ -26,6 +29,7 @@ classdef KDNode
             obj.right = nan;
             obj.axis = nan;
             obj.index = nan;
+            obj.parent = nan;
         end
     end
     
