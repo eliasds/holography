@@ -61,12 +61,13 @@ for frame = 2:numFrames
        positions = particles(i).pos;            %Particle positions
        last_pos = positions(frame - 1, :);
        particles(i).pos(frame, :) = nan(1, 3);
-       particles(i).match(frame-1, 1) = 0;
+       particles(i).match(frame - 1, 1) = 0;
        if ~isnan(last_pos)
            particle_mat(i, 1:3) = last_pos;
        end
     end
     pmat = strip_nans(particle_mat, 4);
+    
     tree = const_tree(pmat, 1);     %Matrix of all particles in previous frame
     
     noMatch = nan(length(particles), 3);
@@ -79,6 +80,9 @@ for frame = 2:numFrames
             continue;
         end
         [nn, index] = nearest_neighbor(tree, part, Data(nan), Data(realmax), Data(-1));
+%        node = nearest_neighbor(tree, part);
+%        nn = node.val;
+%        index = node.index;
         dist = sqrt(sum((nn-part).^2));
         if dist < dist_thresh
             %This is good, then we add it to the matrix at index
@@ -137,6 +141,11 @@ for frame = 2:numFrames
     for i = 1:size(noMatch, 1)
         part = noMatch(i, :);
         [nn, index] = nearest_neighbor(nfTree, part, Data(nan), Data(realmax), Data(-1));
+        
+%        node = nearest_neighbor(nfTree, part);
+%        nn = node.val;
+%        index = node.index;
+        
         d = sqrt(sum((nn-part).^2));
         k = frame - notFound(index).frame;       %Number of frames back
         new_thresh = k*dist_thresh;

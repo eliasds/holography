@@ -32,6 +32,10 @@ function tree = const_tree(points, coord)
     %}
     
     %{
+    
+    TODO can take coord out later and replace with defaultAxis
+    
+    defaultAxis = 1;
     node = const_node_tree(points, coord, dim);
     tree = KDTree(node);
     %}
