@@ -10,13 +10,14 @@ function tree = const_tree(points, coord)
     %TODO deal with a [NaN, NaN, NaN] point
     dim = 3;
     if coord > dim
-        tree = 'PROBLEM';
-        return;
+        error('invalid coordinate entered');
     end
     if isempty(points)
-        tree = 'No points';
+        tree = nan;
         return;
     end
+    
+    %
     [root, left, right] = split(points, coord);
     tree = KDTree();
     tree.root = root(1:3);      %root has extra number-- original index
@@ -28,4 +29,10 @@ function tree = const_tree(points, coord)
     if ~isempty(right)
         tree.right = const_tree(right, mod(coord, dim)+1);
     end
+    %}
+    
+    %{
+    node = const_node_tree(points, coord, dim);
+    tree = KDTree(node);
+    %}
 end

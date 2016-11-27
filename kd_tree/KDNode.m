@@ -23,6 +23,8 @@ classdef KDNode
     end
     
     methods
+        
+        %Constructs a new KDNode.
         function obj = KDNode(label)
             obj.val = label;
             obj.left = nan;
@@ -30,6 +32,16 @@ classdef KDNode
             obj.axis = nan;
             obj.index = nan;
             obj.parent = nan;
+        end
+        
+        % An instantiated object is never nan.
+        function bool = isnan(node)
+            bool = 0;       %TODO make it isnan(node.root)
+        end
+        
+        % Checks if a node is a leaf. node must be a KDNode.
+        function leaf = isLeaf(node)
+            leaf = isnan(node.left) && isnan(node.right);
         end
     end
     

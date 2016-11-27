@@ -2,18 +2,23 @@ classdef KDTree
     %Implementation of a KD Tree. TODO support nodes
     
     properties
-        
-        %Root value (tuple, will change to KDNode)
+        %
         root
-        
         %Splitting axis. Should move into KDNode
         axis            %1=>x, 2=>y, 3=>z
         left
         right
         dim
         index       %Index in original array during creation
+        %}
+        
+        %{
+        %Root value (tuple, will change to KDNode)
+        root
+        %}
     end
     methods
+        %
         function obj = KDTree()
             obj.root = -1;      %Or nan
             obj.axis = -1;
@@ -54,21 +59,23 @@ classdef KDTree
             %TODO method stub
         end
         
+        %}
+        
         %{
         
-        % node must be an instance of KDNode, or nan.
+        % Constructs a new KDNode
         function obj = KDTree(node)
             obj.root = node;
+        end
+        
+        % An instantiated KDTree is never nan.
+        function bool = isnan(tree)
+            bool = isnan(tree.root);
         end
         
         % Checks if there are values in the tree.
         function empty = isEmpty(tree)
             empty = isnan(tree.root);
-        end
-        
-        % Checks if a node is a leaf. node must be a KDNode.
-        function leaf = isLeaf(node)
-            return isnan(node.left) && isnan(node.right);
         end
         
         % Inserts a value into the KDTree.
