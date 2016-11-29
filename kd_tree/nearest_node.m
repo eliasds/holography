@@ -1,3 +1,4 @@
+
 function [ best ] = nearest_node( node, point, best, R )
 %NEAREST_NODE Helper function for nearest_neighbor. Given a KDNode,
 %recursively finds the node value that minimizes distance to a point.

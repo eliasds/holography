@@ -66,30 +66,28 @@ for frame = 2:numFrames
            particle_mat(i, 1:3) = last_pos;
        end
     end
+    
     pmat = strip_nans(particle_mat, 4);
-    
-    tree = const_tree(pmat, 1);     %Matrix of all particles in previous frame
-    
+    tree = const_tree(pmat);
     noMatch = nan(length(particles), 3);
     noMatchIndex = 1;
-    
 %    multiWaitbar('Searching for Nearest Neighbors...',0);
-    for i = 1:n         %For each particle in the current frame
+    %Loop through all particles in current frame
+    for i = 1:n
         part = cur_particles(i, :);     %current particle
         if isnan(part)
             continue;
         end
-        [nn, index] = nearest_neighbor(tree, part, Data(nan), Data(realmax), Data(-1));
-%        node = nearest_neighbor(tree, part);
-%        nn = node.val;
-%        index = node.index;
+        node = nearest_neighbor(tree, part);
+        nn = node.val;
+        index = node.index;
         dist = sqrt(sum((nn-part).^2));
         if dist < dist_thresh
-            %This is good, then we add it to the matrix at index
+            %found particle
             particles(index).pos(frame, :) = part;
             particles(index).match(frame-1, 1) = 1;
         else
-            %Didn't find the nearest particle, so check for blinking
+            %check for blinking particles
             noMatch(noMatchIndex, :) = part;
             noMatchIndex = noMatchIndex + 1;
         end
@@ -121,54 +119,28 @@ for frame = 2:numFrames
             k = k + 1;
         end
     end
-    
-    %{
-    Guard against bug-- points became empty, but didn't continue. 
-    Think what happened is that there were one or two particles in notFound
-    and they were all greater than blink_keep away, so it removed them 
-    from the matrix and points was null. This made the kdTree null, which
-    will return a value of -1 for all operations, hence why the indexing 
-    was throwing an error.
-    %}
     if isnan(points)
         continue;
     end
     
-    nfTree = const_tree(points, 1);
+    nfTree = const_tree(points);
     toDel = nan(1, length(notFound));
     toDelIndex = 1;
     %Iterate through noMatch and find nearest neighbor
     for i = 1:size(noMatch, 1)
-        part = noMatch(i, :);
-        [nn, index] = nearest_neighbor(nfTree, part, Data(nan), Data(realmax), Data(-1));
-        
-%        node = nearest_neighbor(nfTree, part);
-%        nn = node.val;
-%        index = node.index;
-        
+        part = noMatch(i, :);        
+        node = nearest_neighbor(nfTree, part);
+        nn = node.val;
+        index = node.index;
         d = sqrt(sum((nn-part).^2));
         k = frame - notFound(index).frame;       %Number of frames back
         new_thresh = k*dist_thresh;
         if d < new_thresh
-            %pIndex = notFound(index).frame;
             pIndex = notFound(index).index;
-            particles(pIndex).pos(frame, :) = part;%nn(1, 1:3);       %TODO change to part
-            %TODO ADD particles(notFound(index).index:pIndex-1, :) = interpolate(particles(pIndex).pos(frame, :), particles(pIndex).pos(notFound(index).frame, :), frame - notFound(index).frame);
-            %particles(pIndex).match(frame, 1) = 1;
-            
-            %TODO PROBLEM: Since notFound(index) is deleted, all the
-            %indices are off by one. Hopefully this fixes it
-            %notFound(index) = [];
+            particles(pIndex).pos(frame, :) = part;
             toDel(1, toDelIndex) = index;
             toDelIndex = toDelIndex + 1;
             %TODO delete particle from k-d tree. Implement remove
-            %{
-                Problem is that two of the particles in noMatch are very 
-                close to one another, and they find the same particle in
-                notFound. After I delete the particle from notFound, it 
-                tries to again delete the same index, which causes an
-                index out of bounds error
-            %}
         else
             %add particle to particles
             particles(end + 1).pos(frame, :) = part;
