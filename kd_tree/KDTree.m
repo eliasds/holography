@@ -4,11 +4,11 @@ classdef KDTree
     
     properties
 
-        %Root value (tuple, will change to KDNode)
+        % Root value (KDNode)
         root
 
     end
-    methods
+    methods (Access = public)
         
         % Constructs a new KDNode
         function obj = KDTree(node)
@@ -37,6 +37,49 @@ classdef KDTree
             end
         end
         
+        % Finds the node containing a value in the tree.
+        function node = find(val)
+            if size(val, 2) ~= obj.dim
+                error('Wrong dimensions to find');
+            elseif isnan(obj.root)
+                node = nan;
+            else
+                node = findNode(obj.root, val, 1);
+            end
+        end
+        
+        % Deletes a node from the tree and returns it.
+        function node = delete(val)
+            if size(val, 2) ~= obj.dim
+                error('wrong dimensions');
+            elseif isnan(obj.root)
+                node = nan;
+            else
+                node = deleteNode(obj.root, val, 1);
+            end
+        end
+        
+        % Finds the minimum value w.r.t the dth splitting axis
+        function node = findMin(d)
+            %TODO
+        end
+        
+        % Reestablishes the kd property for an arbitrary node
+        function kdify(obj, node)
+            parAxis = obj.getUpAxis(node.axis);
+            %TODO
+        end
+        
+        % Changes the value in a node and rekdifys the node if needed
+        function changeVal(obj, node, val)
+            node.val = val;
+            obj.kdify(node);
+        end
+        
+    end
+    
+    methods (Access = private)
+        
         % Recursive helper function for insert.
         function node = insertNode(node, point, coord)
             if point(1, coord) < node.val(1, coord)
@@ -62,38 +105,16 @@ classdef KDTree
             end
         end
         
-        % Finds the node containing a value in the tree.
-        function node = find(val)
-            if size(val, 2) ~= obj.dim
-                error('Wrong dimensions to find');
-            elseif isnan(obj.root)
-                node = nan;
-            else
-                node = findNode(obj.root, val, 1);
-            end
-        end
-        
         % Recursive helper function for find.
         function node = findNode(node, point, coord)
             if isnan(node.val)
                 node = 0;
-            elseif point == node.val
+            elseif point == node.val(1, coord)
                 return;
-            elseif point(1, coord) < node.val
+            elseif point(1, coord) < node.val(1, coord)
                 node = findNode(node.left, point, mod(coord, obj.dim) + 1);
             else
                 node = findNode(node.right, point, mod(coord, obj.dim) + 1);
-            end
-        end
-        
-        % Deletes a node from the tree and returns it.
-        function node = delete(val)
-            if size(val, 2) ~= obj.dim
-                error('wrong dimensions');
-            elseif isnan(obj.root)
-                node = nan;
-            else
-                node = deleteNode(obj.root, val, 1);
             end
         end
         
@@ -103,8 +124,15 @@ classdef KDTree
                 return;
             end
             if node.val == point
+                if isnan(t.left) && isnan(t.right)
+                    node = nan;
+                    return;
+                elseif isnan(t.right)
+                    t.val = findMin(t.right, coord, mod(coord, obj.dim) + 1);
+                else
+                    t.val = findMin(t.left, coord, mod(coord, obj.dim) + 1);
+                end
                 %TODO
-                
             elseif point(1, coord) < node.val(1, coord)
                 node.left = deleteNode(node.left, point, mod(coord, obj.dim) + 1);
             elseif point(1, coord) > node.val(1, coord)
@@ -112,13 +140,14 @@ classdef KDTree
             end
         end
         
-        % Finds the minimum value w.r.t the dth splitting axis
-        function node = findMin(d)
-            %TODOi
+        % Recursive helper function for findMin.
+        function findMinNode(node, axis, coord)
+            %TODO
         end
         
-        % Recursive helper function for findMin.
-        function findMinNode(node, d)
+        % Gets the up (parent's) direction for the corresponding down
+        % direction
+        function upAxis = getUpAxis(obj, axis)
             %TODO
         end
         

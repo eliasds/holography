@@ -1,4 +1,4 @@
-classdef KDNode
+classdef KDNode < handle
     %KDNODE Node object for a KDTree to use
     
     properties
