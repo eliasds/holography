@@ -1,10 +1,11 @@
 
 function tree = const_tree(points)
 % Constructs a kd tree out of the data points.
-% @param points             array of points to create tree of
+% @param points             array of points to create tree of. Should have
+%                           numColumns = dim + 1.
 % @return                   KDTree with data points
 
-    dim = 3;
+    dim = size(points, 2) - 1;
     if isempty(points)
         tree = nan;
         return;
@@ -12,4 +13,5 @@ function tree = const_tree(points)
     defaultAxis = 1;
     node = const_node_tree(points, defaultAxis, dim);
     tree = KDTree(node);
+    tree.dim = dim;
 end

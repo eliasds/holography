@@ -1,4 +1,4 @@
-classdef KDTree
+classdef KDTree < handle
     % Implementation of a KD Tree. Each KDTree has a root object, which
     % is an instance of KDNode.
     
@@ -6,6 +6,9 @@ classdef KDTree
 
         % Root value (KDNode)
         root
+        
+        % Dimension of points
+        dim
 
     end
     methods (Access = public)
@@ -25,43 +28,49 @@ classdef KDTree
             empty = isnan(tree.root);
         end
         
-        % Inserts a value into the KDTree.
-        function node = insert(val)
-            if size(val, 2) ~= obj.dim
+        % Inserts a value into the KDTree. Value must have an index
+        % attached at end.
+        function node = insert(tree, val)
+            if size(val, 2) ~= tree.dim + 1
                 error('Wrong sized input for insert.');
             end
             if isnan(tree.root)
                 tree.root = KDNode(val);
             else
-                insertNode(obj.root, val, 1);
+%                insertNode(tree.root, val, 1);
+                tree.insertNode(tree.root, val, 1);
             end
         end
         
         % Finds the node containing a value in the tree.
-        function node = find(val)
-            if size(val, 2) ~= obj.dim
+        function node = find(tree, val)
+            if size(val, 2) ~= tree.dim
                 error('Wrong dimensions to find');
-            elseif isnan(obj.root)
+            elseif isnan(tree.root)
                 node = nan;
             else
-                node = findNode(obj.root, val, 1);
+                node = tree.findNode(tree.root, val, 1);
             end
         end
         
         % Deletes a node from the tree and returns it.
-        function node = delete(val)
-            if size(val, 2) ~= obj.dim
+        function node = delete(tree, val)
+            if size(val, 2) ~= tree.dim
                 error('wrong dimensions');
-            elseif isnan(obj.root)
+            elseif isnan(tree.root)
                 node = nan;
             else
-                node = deleteNode(obj.root, val, 1);
+                node = deleteNode(tree.root, val, 1);
             end
         end
         
-        % Finds the minimum value w.r.t the dth splitting axis
-        function node = findMin(d)
-            %TODO
+        % Finds the minimum value w.r.t the cutting dimension cd.
+        function node = findMin(tree, cd)
+            if cd > tree.dim
+                error('cutting dimension too large.');
+            else
+                node = tree.findMinNode(tree.root, cd, tree.root.axis);
+            end
         end
         
         % Reestablishes the kd property for an arbitrary node
@@ -81,45 +90,45 @@ classdef KDTree
     methods (Access = private)
         
         % Recursive helper function for insert.
-        function node = insertNode(node, point, coord)
+        function node = insertNode(obj, node, point, coord)
             if point(1, coord) < node.val(1, coord)
                 if isnan(node.left)
-                    child = KDNode(point);
+                    child = KDNode(point(1:obj.dim));
                     child.parent = node;
                     child.axis = coord;
-                    %child.index = TODO
+                    child.index = point(obj.dim + 1);
                     node.left = child;
                 else
-                    insertNode(node.left, point, mod(coord, obj.dim) + 1);
+                    obj.insertNode(node.left, point, mod(coord, obj.dim) + 1);
                 end
             else
                 if isnan(node.right)
-                    child = KDNode(point);
+                    child = KDNode(point(1:obj.dim));
                     child.parent = node;
                     child.axis = coord;
-                    %TODO child.index = ...
+                    child.index = point(obj.dim + 1);
                     node.right = child;
                 else
-                    insertNode(node.right, point, mod(coord, obj.dim) + 1);
+                    obj.insertNode(node.right, point, mod(coord, obj.dim) + 1);
                 end
             end
         end
         
         % Recursive helper function for find.
-        function node = findNode(node, point, coord)
-            if isnan(node.val)
+        function node = findNode(obj, node, point, coord)
+            if isnan(node) | isnan(node.val)
                 node = 0;
-            elseif point == node.val(1, coord)
+            elseif point == node.val
                 return;
-            elseif point(1, coord) < node.val(1, coord)
-                node = findNode(node.left, point, mod(coord, obj.dim) + 1);
+            elseif point(coord) < node.val(coord)
+                node = obj.findNode(node.left, point, mod(coord, obj.dim) + 1);
             else
-                node = findNode(node.right, point, mod(coord, obj.dim) + 1);
+                node = obj.findNode(node.right, point, mod(coord, obj.dim) + 1);
             end
         end
         
         % Recursive helper function for delete.
-        function node = deleteNode(node, point, coord)
+        function node = deleteNode(obj, node, point, coord)
             if isnan(node)
                 return;
             end
@@ -141,8 +150,39 @@ classdef KDTree
         end
         
         % Recursive helper function for findMin.
-        function findMinNode(node, axis, coord)
-            %TODO
+        function node = findMinNode(obj, node, axis, cd)
+            if isnan(node) | isnan(node.val)
+                data = nan(obj.dim);
+                data(cd) = realmax;
+                node = KDNode(data);
+            elseif node.isLeaf()
+                return;
+            elseif cd == axis
+                if ~isnan(node.left)
+                    node = obj.findMinNode(node.left, axis, mod(cd, obj.dim) + 1);
+                end
+            else
+                left = obj.findMinNode(node.left, axis, mod(cd, obj.dim) + 1);
+                right = obj.findMinNode(node.right, axis, mod(cd, obj.dim) + 1);
+                node = obj.minimumNode(node, left, right, axis);
+            end
+        end
+        
+        function node = minimumNode(obj, n1, n2, n3, axis)
+            val1 = n1.val(axis); val2 = n2.val(axis); val3 = n3.val(axis);
+            if val1 < val2
+                if val1 < val3
+                    node = n1;
+                else
+                    node = n3;
+                end
+            else
+                if val2 < val3
+                    node = n2;
+                else
+                    node = n3;
+                end
+            end
         end
         
         % Gets the up (parent's) direction for the corresponding down

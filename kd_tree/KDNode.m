@@ -36,7 +36,7 @@ classdef KDNode < handle
         
         % An instantiated object is never nan.
         function bool = isnan(node)
-            bool = 0;       %TODO make it isnan(node.root)
+            bool = 0;       %TODO make it isnan(node.val)
         end
         
         % Checks if a node is a leaf. node must be a KDNode.
