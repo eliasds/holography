@@ -37,8 +37,7 @@ classdef KDTree < handle
             if isnan(tree.root)
                 tree.root = KDNode(val);
             else
-%                insertNode(tree.root, val, 1);
-                tree.insertNode(tree.root, val, 1);
+                tree.insertNode(tree.root, val, tree.root.axis);
             end
         end
         
@@ -49,7 +48,7 @@ classdef KDTree < handle
             elseif isnan(tree.root)
                 node = nan;
             else
-                node = tree.findNode(tree.root, val, 1);
+                node = tree.findNode(tree.root, val, tree.root.axis);
             end
         end
         
@@ -57,10 +56,10 @@ classdef KDTree < handle
         function node = delete(tree, val)
             if size(val, 2) ~= tree.dim
                 error('wrong dimensions');
-            elseif isnan(tree.root)
+            elseif isnan(tree)
                 node = nan;
             else
-                node = deleteNode(tree.root, val, 1);
+                node = tree.deleteNode(tree.root, val, tree.root.axis);
             end
         end
         
@@ -128,31 +127,34 @@ classdef KDTree < handle
         end
         
         % Recursive helper function for delete.
-        function node = deleteNode(obj, node, point, coord)
+        function node = deleteNode(obj, node, point, cd)
             if isnan(node)
+                node = 0;
                 return;
             end
             if node.val == point
-                if isnan(t.left) && isnan(t.right)
+                if node.isLeaf()
                     node = nan;
-                    return;
-                elseif isnan(t.right)
-                    t.val = findMin(t.right, coord, mod(coord, obj.dim) + 1);
+                    return;         %not trying to modify node, just returning it
+                elseif isnan(node.right)
+                    node.val = obj.findMinNode(node.left, cd, mod(cd, obj.dim) + 1).val;
+                    node.right = obj.deleteNode(node.left, node.val, mod(cd, obj.dim) + 1);
+                    node.left = nan;
                 else
-                    t.val = findMin(t.left, coord, mod(coord, obj.dim) + 1);
+                    node.val = obj.findMinNode(node.right, cd, mod(cd, obj.dim) + 1).val;
+                    node.right = obj.deleteNode(node.right, node.val, mod(cd, obj.dim) + 1);
                 end
-                %TODO
-            elseif point(1, coord) < node.val(1, coord)
-                node.left = deleteNode(node.left, point, mod(coord, obj.dim) + 1);
-            elseif point(1, coord) > node.val(1, coord)
-                node.right = deleteNode(node.right, point, mod(coord, obj.dim) + 1);
+            elseif point(1, cd) < node.val(1, cd)
+                node.left = obj.deleteNode(node.left, point, mod(cd, obj.dim) + 1);
+            elseif point(1, cd) > node.val(1, cd)
+                node.right = obj.deleteNode(node.right, point, mod(cd, obj.dim) + 1);
             end
         end
         
         % Recursive helper function for findMin.
         function node = findMinNode(obj, node, axis, cd)
             if isnan(node) | isnan(node.val)
-                data = nan(obj.dim);
+                data = nan(1, obj.dim);
                 data(cd) = realmax;
                 node = KDNode(data);
             elseif node.isLeaf()
@@ -168,6 +170,8 @@ classdef KDTree < handle
             end
         end
         
+        % Returns the node with the minimum value in the axis cutting
+        % dimension.
         function node = minimumNode(obj, n1, n2, n3, axis)
             val1 = n1.val(axis); val2 = n2.val(axis); val3 = n3.val(axis);
             if val1 < val2
