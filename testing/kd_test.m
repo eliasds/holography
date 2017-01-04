@@ -1,6 +1,5 @@
 
 data = [0 5 1; -7 1 2; 4 3 3; 2 1 4; 3 0 5; -4 -4 6; -3 -2 7; -6 -3 8; -2 -1 9];
-
 tree = const_tree(data);
 
 %test insert
@@ -37,11 +36,6 @@ newTree = KDTree(tree.root.right);
 newTree.dim = 2;
 assertMatrixEquals([0 5], newTree.findMin(1).val);
 assertMatrixEquals([4 -5], newTree.findMin(2).val);
-
-miniTree = KDTree(tree.root.right);
-miniTree.dim = 2;
-assertMatrixEquals([0 5], miniTree.findMin(1).val);
-assertMatrixEquals([4 -5], miniTree.findMin(2).val);
 
 %test delete leaf
 assertNotNan(tree.root.left.left);
