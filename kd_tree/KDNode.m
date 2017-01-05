@@ -1,5 +1,5 @@
 classdef KDNode < handle
-    %KDNODE Node object for a KDTree to use
+    % KDNODE Node object for a KDTree to use
     
     properties
         
@@ -20,6 +20,11 @@ classdef KDNode < handle
         
         % Index in original data set, used for nearest_neighbor purposes.
         index
+        
+        % Bounds of the kd tree. Rows: 1 -> x, 2 -> y, 3 -> z. Cols: 1 ->
+        % min, 2 -> max.
+        bounds
+        
     end
     
     methods

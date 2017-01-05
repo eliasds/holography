@@ -72,16 +72,27 @@ classdef KDTree < handle
             end
         end
         
-        % Reestablishes the kd property for an arbitrary node
-        function kdify(obj, node)
-            parAxis = obj.getUpAxis(node.axis);
-            %TODO
+        % Checks if the kd property will be violated by replacing the
+        % node's value with val.
+        function isKDified(tree, node, val)
+            % TODO
+            % Just have to check if the val is within the bounds
         end
-        
+                
         % Changes the value in a node and rekdifys the node if needed
-        function changeVal(obj, node, val)
-            node.val = val;
-            obj.kdify(node);
+        function changeVal(tree, node, val)
+            if isKDified(tree, node, val)
+                node.val = val;
+            else
+                tree.delete(node.val);
+                % TODO: Make sure insert adds on proper bounds
+                newNode = tree.insert(val);
+                newNode.parent = node.parent;
+                newNode.left = node.left;
+                newNode.right = node.right;
+                newNode.axis = node.axis;
+                newNode.index = node.index;
+            end
         end
         
     end
@@ -172,7 +183,7 @@ classdef KDTree < handle
         
         % Returns the node with the minimum value in the axis cutting
         % dimension.
-        function node = minimumNode(obj, n1, n2, n3, axis)
+        function node = minimumNode(~, n1, n2, n3, axis)
             val1 = n1.val(axis); val2 = n2.val(axis); val3 = n3.val(axis);
             if val1 < val2
                 if val1 < val3

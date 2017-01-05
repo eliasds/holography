@@ -1,4 +1,8 @@
 
+% Test of KDTree class. Tests insert, isLeaf, find, findMin, and delete.
+% Note that this test is of the KDTree in 2 dimensions, although I typically
+% use 3 dimensions in practice.
+
 data = [0 5 1; -7 1 2; 4 3 3; 2 1 4; 3 0 5; -4 -4 6; -3 -2 7; -6 -3 8; -2 -1 9];
 tree = const_tree(data);
 
@@ -80,4 +84,4 @@ assertMatrixEquals([4 -5], tree.root.right.val);
 assertMatrixEquals([3 0], tree.root.right.right.val);
 assertMatrixEquals([2 -1], tree.root.right.right.left.val);
 
-disp('all tests passed');
+disp('all tests passed.');

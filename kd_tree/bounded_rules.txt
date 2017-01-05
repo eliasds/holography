@@ -9,7 +9,7 @@ location outside the set bounds, the node is deleted and then reinserted
 with the new value, which will take lgN time (assuming the tree is 
 relatively bushy.
 
-Implementation: Each node will have a "minimax matrix" of the form: [x_min 
+Implementation: Each node will have a "bounds matrix" of the form: [x_min 
 x_max; y_min y_max; z_min z_max]. These matrices will contain the bounds on 
 the node's value. 
 
@@ -25,16 +25,16 @@ value will be modified to be the parent node's cd coordinate. Likewise, when
 passing to the left (<) node, the cd_max value will be set equal to the 
 parent node's cd coordinate.
 
-Minmax matrices: Each node will store one minmax matrix. The minmax matrix
+Bounds matrices: Each node will store one bounds matrix. The bounds matrix
 will give the bounds on where the node can be moved to. When initializing 
-the kdtree, each node will be passed a passing matrix. The minmax matrix
+the kdtree, each node will be passed a passing matrix. The bounds matrix
 that the node stores will take the points in the passing matrix not
 corresponding to the node's cutting dimension. The nodes in the cutting 
 dimension will be determined by the list the node is splitting. Once the 
 list of points is sorted and the median value chosen for the node, the 
 values immediately greater than the node and less than the node in the list
 will have their cd coordinate be chosen as the cd_max and cd_min value for
-the parent node's minmax matrix. If there less than 3 children in the list
+the parent node's bounds matrix. If there less than 3 children in the list
 (so the parent node will have one or 0 children) then the information that
 is not given by the children nodes will be obtained from the corresponding 
 dimension in the passing matrix.
@@ -43,7 +43,7 @@ Potential problems:
 1. Moving node A closer to node B then moving node B closer to node A could
    violate the kd property without alerting the tree because the minimax 
    matrices reference copies of values.
-   Possible solution (may take lots of space): Have each minmax matrix be a 
+   Possible solution (may take lots of space): Have each bounds matrix be a 
    matrix of handle objects (could be a new class or could just point to 
    other nodes), so that when you update the value in one node, you update
    the value in some object that is being pointed to, and in all 
