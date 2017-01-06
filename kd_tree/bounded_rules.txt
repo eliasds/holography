@@ -39,6 +39,13 @@ the parent node's bounds matrix. If there less than 3 children in the list
 is not given by the children nodes will be obtained from the corresponding 
 dimension in the passing matrix.
 
+Insertion: Insert like normal. For bounds matrix on the inserted node, keep
+a passing matrix like in the creation and at the end of the insertion set 
+this passing matrix to be the bounds matrix. At every step in the insertion,
+check if the node to be inserted has a value in the cutting direction that 
+is inside the current bounds. If it is, update the bound in the cutting 
+direction.
+
 Potential problems:
 1. Moving node A closer to node B then moving node B closer to node A could
    violate the kd property without alerting the tree because the minimax 

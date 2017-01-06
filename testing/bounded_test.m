@@ -52,11 +52,33 @@ assertMatrixEquals([5 infty; -2 8], tree.root.right.right.right.bounds);
 assertMatrixEquals([5 infty; 3 infty], tree.root.right.right.right.right.bounds);
 
 %test isKDified
-
-%test changeVal
+assertTrue(tree.isKDified(tree.root.right.left, [8 -6]));
+assertTrue(tree.isKDified(tree.root.right.left, [10 -5]));
+assertFalse(tree.isKDified(tree.root.right.left, [3 -5]));
+assertTrue(tree.isKDified(tree.root, [1 -3]));
+assertTrue(tree.isKDified(tree.root, [2.75 -1.75]));
+assertFalse(tree.isKDified(tree.root, [4 -1]));
+assertTrue(tree.isKDified(tree.root.left.right.right, [-2, 5]));
 
 %test insertion
+tree.insert([8 -6 21]);
+assertMatrixEquals([8 -6], tree.root.right.left.right.right.left.val);
+assertMatrixEquals([6 15; -10 -2], tree.root.right.left.right.right.left.bounds);
+assertMatrixEquals([4 8; -infty -2], tree.root.right.left.bounds);
+assertMatrixEquals([6 infty; -infty -7], tree.root.right.left.right.bounds);
+assertMatrixEquals([8 infty; -10 -2], tree.root.right.left.right.right.bounds);
+
+tree.insert([9, 2, 22]);
+assertMatrixEquals([9 2], tree.root.right.right.right.left.val);
+assertMatrixEquals([5 infty; -2 3], tree.root.right.right.right.left.bounds);
+assertMatrixEquals([5 infty; 2 8], tree.root.right.right.right.bounds);
+
+assertMatrixEquals([-4 3; -infty infty], tree.root.bounds);
+assertMatrixEquals([1 infty; -3 1], tree.root.right.bounds);
+assertMatrixEquals([3 6; -2 infty], tree.root.right.right.bounds);
 
 %test deletion
+
+%test changeVal
 
 disp('all tests passed.');

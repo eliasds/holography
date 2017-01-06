@@ -2,7 +2,7 @@ classdef KDTree < handle
     % Implementation of a KD Tree. Each KDTree has a root object, which
     % is an instance of KDNode.
     
-    properties
+    properties (Access = public)
 
         % Root value (KDNode)
         root
@@ -11,6 +11,14 @@ classdef KDTree < handle
         dim
 
     end
+    
+    properties (Access = private)
+        
+        % Infinite value. TODO change to realmax.
+        infty = 1000;
+        
+    end
+    
     methods (Access = public)
         
         % Constructs a new KDNode
@@ -28,16 +36,22 @@ classdef KDTree < handle
             empty = isnan(tree.root);
         end
         
-        % Inserts a value into the KDTree. Value must have an index
-        % attached at end.
+        % Inserts a value into the KDTree and updates bounds. Value must 
+        % have an index attached at end.
         function node = insert(tree, val)
             if size(val, 2) ~= tree.dim + 1
                 error('Wrong sized input for insert.');
             end
+                passing = [];
+            for i = 1 : tree.dim
+                passing(i, :) = [-tree.infty tree.infty];
+            end
             if isnan(tree.root)
                 tree.root = KDNode(val);
+                tree.root.bounds = passing;
+                node = tree.root;
             else
-                tree.insertNode(tree.root, val, tree.root.axis);
+                node = tree.insertNode(tree.root, val, tree.root.axis, passing);
             end
         end
         
@@ -74,9 +88,14 @@ classdef KDTree < handle
         
         % Checks if the kd property will be violated by replacing the
         % node's value with val.
-        function isKDified(tree, node, val)
-            % TODO
-            % Just have to check if the val is within the bounds
+        function bool = isKDified(tree, node, val)
+            bool = 1;
+            for i = 1 : tree.dim
+                if val(i) < node.bounds(i, 1) | val(i) > node.bounds(i, 2)
+                    bool = 0;
+                    return;
+                end
+            end
         end
                 
         % Changes the value in a node and rekdifys the node if needed
@@ -100,26 +119,40 @@ classdef KDTree < handle
     methods (Access = private)
         
         % Recursive helper function for insert.
-        function node = insertNode(obj, node, point, coord)
-            if point(1, coord) < node.val(1, coord)
+        function inserted = insertNode(obj, node, point, cd, passing)
+            if point(cd) < node.val(cd)
+                passing(cd, 2) = node.val(cd);
+                if node.bounds(cd, 1) < point(cd)
+                    node.bounds(cd, 1) = point(cd);
+                end
                 if isnan(node.left)
                     child = KDNode(point(1:obj.dim));
                     child.parent = node;
-                    child.axis = coord;
+                    child.axis = cd;
                     child.index = point(obj.dim + 1);
+                    child.bounds = passing;
                     node.left = child;
+                    inserted = child;
                 else
-                    obj.insertNode(node.left, point, mod(coord, obj.dim) + 1);
+                    inserted = obj.insertNode(node.left, point, ...
+                        mod(cd, obj.dim) + 1, passing);
                 end
             else
+                passing(cd, 1) = node.val(1, cd);
+                if node.bounds(cd, 2) > point(cd)
+                    node.bounds(cd, 2) = point(cd);
+                end
                 if isnan(node.right)
                     child = KDNode(point(1:obj.dim));
                     child.parent = node;
-                    child.axis = coord;
+                    child.axis = cd;
                     child.index = point(obj.dim + 1);
+                    child.bounds = passing;
                     node.right = child;
+                    inserted = child;
                 else
-                    obj.insertNode(node.right, point, mod(coord, obj.dim) + 1);
+                    inserted = obj.insertNode(node.right, point, ...
+                        mod(cd, obj.dim) + 1, passing);
                 end
             end
         end
@@ -146,7 +179,7 @@ classdef KDTree < handle
             if node.val == point
                 if node.isLeaf()
                     node = nan;
-                    return;         %not trying to modify node, just returning it
+                    return;
                 elseif isnan(node.right)
                     node.val = obj.findMinNode(node.left, cd, mod(cd, obj.dim) + 1).val;
                     node.right = obj.deleteNode(node.left, node.val, mod(cd, obj.dim) + 1);

@@ -7,13 +7,13 @@ data = [0 5 1; -7 1 2; 4 3 3; 2 1 4; 3 0 5; -4 -4 6; -3 -2 7; -6 -3 8; -2 -1 9];
 tree = const_tree(data);
 
 %test insert
-tree.insert([2 -1 10])
+tree.insert([2 -1 10]);
 assertMatrixEquals(tree.root.right.left.left.val, [2 -1]);
 assertNan(tree.root.right.left.left.left);
 assertNan(tree.root.right.left.left.right);
 
 assertNan(tree.root.right.left.right);
-tree.insert([4 -5 11])
+tree.insert([4 -5 11]);
 assertMatrixEquals(tree.root.right.left.right.val, [4 -5]);
 
 %test isLeaf
