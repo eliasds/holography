@@ -14,4 +14,5 @@ function tree = const_tree(points)
     node = const_node_tree(points, defaultAxis, dim);
     tree = KDTree(node);
     tree.dim = dim;
+    tree.size = size(points, 1);
 end

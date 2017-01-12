@@ -9,6 +9,9 @@ classdef KDTree < handle
         
         % Dimension of points
         dim
+        
+        % Number of nodes in the tree.
+        size
 
     end
     
@@ -36,9 +39,26 @@ classdef KDTree < handle
             empty = isnan(tree.root);
         end
         
-        % Inserts a value into the KDTree and updates bounds. Value must 
-        % have an index attached at end.
+        % Inserts a value into the KDTree. Value must have an index 
+        % attached at end.
         function node = insert(tree, val)
+            if size(val, 2) ~= tree.dim + 1
+                error('Wrong sized input for insert.');
+            end
+            if isnan(tree.root)
+                tree.root = KDNode(val);
+                node = tree.root;
+            else
+                node = tree.insertNode(tree.root, val, tree.root.axis);
+                if ~isnan(node)
+                    tree.size = tree.size + 1;
+                end
+            end
+        end
+        
+        % Inserts a value into the KDTree and updates bounds. Value must 
+        % have an index attached at the end.
+        function boundedInsert(tree, val)
             if size(val, 2) ~= tree.dim + 1
                 error('Wrong sized input for insert.');
             end
@@ -51,7 +71,10 @@ classdef KDTree < handle
                 tree.root.bounds = passing;
                 node = tree.root;
             else
-                node = tree.insertNode(tree.root, val, tree.root.axis, passing);
+                node = tree.insertBoundedNode(tree.root, val, tree.root.axis, passing);
+                if ~isnan(node)
+                    tree.size = tree.size + 1;
+                end
             end
         end
         
@@ -74,6 +97,26 @@ classdef KDTree < handle
                 node = nan;
             else
                 node = tree.deleteNode(tree.root, val, tree.root.axis);
+                if ~isnan(node)
+                    tree.size = tree.size - 1;
+                end
+            end
+        end
+        
+        % Deletes a node from the tree and updates bounds. Returns the 
+        % deleted node.
+        function node = boundedDelete(tree, val)
+            if size(val, 2) ~= tree.dim
+                error('wrong dimensions');
+            elseif isnan(tree)
+                node = nan;
+            else
+                flagged = Data(nan(1, tree.size));
+                node = tree.deleteBoundedNode(tree.root, val, ... 
+                    tree.root.axis, flagged);
+                if ~isnan(node)
+                    tree.size = tree.size - 1;
+                end
             end
         end
         
@@ -83,6 +126,15 @@ classdef KDTree < handle
                 error('cutting dimension too large.');
             else
                 node = tree.findMinNode(tree.root, cd, tree.root.axis);
+            end
+        end
+        
+        % Finds the minimum value w.r.t. the cutting dimension cd.
+        function node = findMax(tree, cd)
+            if cd > tree.dim
+                error('cutting dimension too large.');
+            else
+                node = tree.findMaxNode(tree.root, cd, tree.root.axis);
             end
         end
         
@@ -119,7 +171,36 @@ classdef KDTree < handle
     methods (Access = private)
         
         % Recursive helper function for insert.
-        function inserted = insertNode(obj, node, point, cd, passing)
+        function inserted = insertNode(obj, node, point, cd)
+            if point(cd) < node.val(cd)
+                if isnan(node.left)
+                    child = KDNode(point(1:obj.dim));
+                    child.parent = node;
+                    child.axis = cd;
+                    child.index = point(obj.dim + 1);
+                    node.left = child;
+                    inserted = child;
+                else
+                    inserted = obj.insertNode(node.left, point, ...
+                        mod(cd, obj.dim) + 1);
+                end
+            else
+                if isnan(node.right)
+                    child = KDNode(point(1:obj.dim));
+                    child.parent = node;
+                    child.axis = cd;
+                    child.index = point(obj.dim + 1);
+                    node.right = child;
+                    inserted = child;
+                else
+                    inserted = obj.insertNode(node.right, point, ...
+                        mod(cd, obj.dim) + 1);
+                end
+            end
+        end
+        
+        % Recursive helper function for boundedInsert.
+        function inserted = insertBoundedNode(obj, node, point, cd, passing)
             if point(cd) < node.val(cd)
                 passing(cd, 2) = node.val(cd);
                 if node.bounds(cd, 1) < point(cd)
@@ -134,7 +215,7 @@ classdef KDTree < handle
                     node.left = child;
                     inserted = child;
                 else
-                    inserted = obj.insertNode(node.left, point, ...
+                    inserted = obj.insertBoundedNode(node.left, point, ...
                         mod(cd, obj.dim) + 1, passing);
                 end
             else
@@ -151,7 +232,7 @@ classdef KDTree < handle
                     node.right = child;
                     inserted = child;
                 else
-                    inserted = obj.insertNode(node.right, point, ...
+                    inserted = obj.insertBoundedNode(node.right, point, ...
                         mod(cd, obj.dim) + 1, passing);
                 end
             end
@@ -195,12 +276,15 @@ classdef KDTree < handle
             end
         end
         
+        % Recursive helper function for boundedDelete
+        function node = deleteBoundedNode(obj, node, point, cd, flagged)
+            
+        end
+        
         % Recursive helper function for findMin.
         function node = findMinNode(obj, node, axis, cd)
             if isnan(node) | isnan(node.val)
-                data = nan(1, obj.dim);
-                data(cd) = realmax;
-                node = KDNode(data);
+                node = nan;
             elseif node.isLeaf()
                 return;
             elseif cd == axis
@@ -210,14 +294,38 @@ classdef KDTree < handle
             else
                 left = obj.findMinNode(node.left, axis, mod(cd, obj.dim) + 1);
                 right = obj.findMinNode(node.right, axis, mod(cd, obj.dim) + 1);
-                node = obj.minimumNode(node, left, right, axis);
+                node = obj.minThreeNode(node, left, right, axis);
             end
         end
         
+        % Recursive helper function for findMax.
+        function node = findMaxNode(obj, node, axis, cd)
+           if isnan(node) | isnan(node.val)
+               node = nan;
+           elseif node.isLeaf()
+               return;
+           elseif cd == axis
+               if ~isnan(node.right)
+                   node = obj.findMaxNode(node.right, axis, mod(cd, obj.dim) + 1);
+               end
+           else
+               left = obj.findMaxNode(node.left, axis, mod(cd, obj.dim) + 1);
+               right = obj.findMaxNode(node.right, axis, mod(cd, obj.dim) + 1);
+               node = obj.maxThreeNode(node, left, right, axis);
+           end
+        end
+        
         % Returns the node with the minimum value in the axis cutting
-        % dimension.
-        function node = minimumNode(~, n1, n2, n3, axis)
-            val1 = n1.val(axis); val2 = n2.val(axis); val3 = n3.val(axis);
+        % dimension. Takes three nodes as parameters.
+        function node = minThreeNode(obj, n1, n2, n3, cd)
+            if isnan(n1)
+                node = obj.minTwoNode(n2, n3, cd); return;
+            elseif isnan(n2)
+                node = obj.minTwoNode(n1, n3, cd); return;
+            elseif isnan(n3)
+                node = obj.minTwoNode(n1, n2, cd); return;
+            end
+            val1 = n1.val(cd); val2 = n2.val(cd); val3 = n3.val(cd);
             if val1 < val2
                 if val1 < val3
                     node = n1;
@@ -230,6 +338,65 @@ classdef KDTree < handle
                 else
                     node = n3;
                 end
+            end
+        end
+        
+        % Returns the node with the minimum value in the proper cutting 
+        % dimension. Takes two nodes as parameters.
+        function node = minTwoNode(~, n1, n2, cd)
+            if isnan(n1)
+                node = n2; return;
+            elseif isnan(n2)
+                node = n1; return;
+            end
+            if n1.val(cd) < n2.val(cd)
+                node = n1;
+            else
+                node = n2;
+            end
+        end
+        
+        % Returns the node with the maximum value in the proper cutting 
+        % dimension. Takes 3 nodes as parameters.
+        function node = maxThreeNode(obj, n1, n2, n3, cd)
+            if isnan(n1)
+                node = obj.maxTwoNode(n2, n3, cd);
+                return;
+            elseif isnan(n2)
+                node = obj.maxTwoNode(n1, n3, cd);
+                return;
+            elseif isnan(n3)
+                node = obj.maxTwoNode(n1, n2, cd);
+                return;
+            end
+            val1 = n1.val(cd); val2 = n2.val(cd); val3 = n3.val(cd);
+            if val1 > val2
+                if val1 > val3
+                    node = n1;
+                else
+                    node = n3;
+                end
+            else
+                if val2 > val3
+                    node = n2;
+                else
+                    node = n3;
+                end
+            end
+        end
+        
+        % Returns the node with the maximum value in the proper cutting 
+        % dimension. Takes 2 nodes as parameters.
+        function node = maxTwoNode(~, n1, n2, cd)
+            if isnan(n1)
+                node = n2; return;
+            elseif isnan(n2)
+                node = n1; return;
+            end
+            if n1.val(cd) > n2.val(cd)
+                node = n1;
+            else
+                node = n2;
             end
         end
         

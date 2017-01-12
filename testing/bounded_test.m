@@ -6,6 +6,7 @@ data = [-5 -8 1; -10 -4 2; -12 -1 3; -4 -3 4; -8 14 5; -7 3 6; -10 1 7;
     -11 9 8; -4 7 9; 1 -1 10; 8 3 11; 6 8 12; 5 11 13; 3 1 14; 4 -3 15; 
     6 -5 16; 12 -10 17; 9 -2 18; 15 -7 20];
 tree = const_bounded_tree(data);
+assertEquals(19, tree.size);
 
 %test tree initialization
 assertMatrixEquals([1 -1], tree.root.val);
@@ -61,23 +62,36 @@ assertFalse(tree.isKDified(tree.root, [4 -1]));
 assertTrue(tree.isKDified(tree.root.left.right.right, [-2, 5]));
 
 %test insertion
-tree.insert([8 -6 21]);
+tree.boundedInsert([8 -6 21]);
 assertMatrixEquals([8 -6], tree.root.right.left.right.right.left.val);
 assertMatrixEquals([6 15; -10 -2], tree.root.right.left.right.right.left.bounds);
 assertMatrixEquals([4 8; -infty -2], tree.root.right.left.bounds);
 assertMatrixEquals([6 infty; -infty -7], tree.root.right.left.right.bounds);
 assertMatrixEquals([8 infty; -10 -2], tree.root.right.left.right.right.bounds);
+assertEquals(20, tree.size);
 
-tree.insert([9, 2, 22]);
+tree.boundedInsert([9, 2, 22]);
 assertMatrixEquals([9 2], tree.root.right.right.right.left.val);
 assertMatrixEquals([5 infty; -2 3], tree.root.right.right.right.left.bounds);
 assertMatrixEquals([5 infty; 2 8], tree.root.right.right.right.bounds);
+assertEquals(21, tree.size);
 
 assertMatrixEquals([-4 3; -infty infty], tree.root.bounds);
 assertMatrixEquals([1 infty; -3 1], tree.root.right.bounds);
 assertMatrixEquals([3 6; -2 infty], tree.root.right.right.bounds);
 
-%test deletion
+%test leaf deletion
+tree.boundedDelete([3 1]);
+assertMatrixEquals([-4 4; -infty infty], tree.root.bounds);
+assertMatrixEquals([1 infty; -3 2], tree.root.right.bounds);
+assertMatrixEquals([1 6; -2 infty], tree.root.right.right.bounds);
+assertNan(tree.root.right.right.left);
+
+%test right subtree deletion
+
+%test left subtree deletion
+
+%test changing value mutates other bounds matrices
 
 %test changeVal
 

@@ -46,6 +46,45 @@ check if the node to be inserted has a value in the cutting direction that
 is inside the current bounds. If it is, update the bound in the cutting 
 direction.
 
+Deletion: This is significantly more complicated than regular kd deletion 
+(which is already complicated enough). Deleting a point at the bottom of
+the tree, if it is sufficiently close to points further up in the tree, 
+could have a large effect on the bounds matrices of the points further up.
+The basic idea is to have a "flag and polish" implementatation that flags 
+each node that needs to have its bounds matrix changed, then "polishes" 
+all of the flagged nodes to make their bounds matrices update without the 
+deleted point.
+
+Note that although flag and polish will be run for all deletions, the 
+deletion will only be complete after with all the bounds matrices updated 
+for the case of deleting a leaf node. I still need to determine what else 
+needs to be done when deleting an interior node, as the tree structure has 
+the potential to change drastically.
+
+Flag and Polish: In the deleting algorithm, nodes will be "flagged" to 
+store them for future editing (this is because to polish, we need to find 
+the min and max of the tree without the deleted node, so we need to finish 
+the deletion first before we can polish). To flag, figure out first if the 
+deletion algorithm will recurse down the right or left subtree. If it 
+recurses down the left, flag iff bounds(cd, 1) == point(cd), where point 
+is the k-tuple representing the point to be deleted. If down the right, 
+flag iff bounds(cd, 2) == point(cd). Continue with the deletion, adding all 
+flagged nodes to some sort of vector to polish afterwards. To polish, 
+determine the cd of the node and exactly which entry corresponds to the 
+deleted point (if bounds(cd, 1) is the point, then the min entry was 
+deleted, and if bounds(cd, 2) is the point, then the max entry was deleted).
+If a minimum entry was deleted, use findMax on the left subtree in the 
+cutting dimension and replace bounds(cd, 1) with this node's value in the 
+cd. If a max extry was deleted, use findMin on the right subtree in the cd 
+and replace bounds(cd, 2) with this value's cd coordinate. **If the left or 
+right subtree is nonexistent, then find the polishing value by taking the 
+node's parent's parent's parent's (for each dimension, move up a parent. Or 
+equivalently, keep going toward the parent until the parent's cutting 
+dimension is the current node's cd value) cd value. This is because we know 
+the node has to be either > or < the (dim times) parent's cd value, so that 
+becomes out new bound if the original bound (in the child node that was 
+deleted) needs to be updated.
+
 Potential problems:
 1. Moving node A closer to node B then moving node B closer to node A could
    violate the kd property without alerting the tree because the minimax 

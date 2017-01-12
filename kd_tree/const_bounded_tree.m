@@ -12,11 +12,12 @@ function tree = const_bounded_tree(points)
     end
     defaultAxis = 1;
     infty = 1000;        %TODO change to handle
-    passing = [];
+    passing = nan(dim, 2);
     for i = 1 : dim
         passing(i, :) = [-infty infty];
     end
     node = const_bounded_node_tree(points, defaultAxis, dim, passing);
     tree = KDTree(node);
     tree.dim = dim;
+    tree.size = size(points, 1);
 end
