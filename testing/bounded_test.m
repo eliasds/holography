@@ -84,8 +84,14 @@ assertMatrixEquals([3 6; -2 infty], tree.root.right.right.bounds);
 tree.boundedDelete([3 1]);
 assertMatrixEquals([-4 4; -infty infty], tree.root.bounds);
 assertMatrixEquals([1 infty; -3 2], tree.root.right.bounds);
-assertMatrixEquals([1 6; -2 infty], tree.root.right.right.bounds);
+assertMatrixEquals([1 6; -2 infty], tree.root.right.right.bounds);      %Get parent val
 assertNan(tree.root.right.right.left);
+
+tree.boundedDelete([-12 -1]);
+assertMatrixEquals([-4 4; -infty infty], tree.root.bounds);
+assertMatrixEquals([-infty 1; -3 3], tree.root.left.bounds);
+assertMatrixEquals([-infty -5; -infty 1], tree.root.left.left.bounds);
+assertNan(tree.root.left.left.left);
 
 %test right subtree deletion
 

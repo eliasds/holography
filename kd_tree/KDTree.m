@@ -111,12 +111,13 @@ classdef KDTree < handle
             elseif isnan(tree)
                 node = nan;
             else
-                flagged = Data(nan(1, tree.size));
+                flagged = NodeArray(tree.size);
                 node = tree.deleteBoundedNode(tree.root, val, ... 
                     tree.root.axis, flagged);
                 if ~isnan(node)
                     tree.size = tree.size - 1;
                 end
+                tree.polish(val, flagged);
             end
         end
         
@@ -156,7 +157,6 @@ classdef KDTree < handle
                 node.val = val;
             else
                 tree.delete(node.val);
-                % TODO: Make sure insert adds on proper bounds
                 newNode = tree.insert(val);
                 newNode.parent = node.parent;
                 newNode.left = node.left;
@@ -278,7 +278,86 @@ classdef KDTree < handle
         
         % Recursive helper function for boundedDelete
         function node = deleteBoundedNode(obj, node, point, cd, flagged)
-            
+            if isnan(node)
+                node = 0;
+                return;
+            end
+            if node.val == point
+                if node.isLeaf()
+                    node = nan;
+                    return;
+                elseif isnan(node.right)
+                    node.val = obj.findMinNode(node.left, cd, mod(cd, obj.dim) + 1).val;
+                    node.right = obj.deleteBoundedNode(node.left, node.val, ... 
+                        mod(cd, obj.dim) + 1, flagged);
+                    node.left = nan;
+                else
+                    node.val = obj.findMinNode(node.right, cd, mod(cd, obj.dim) + 1).val;
+                    node.right = obj.deleteBoundedNode(node.right, node.val, ... 
+                        mod(cd, obj.dim) + 1, flagged);
+                end
+            elseif point(1, cd) < node.val(1, cd)
+                if node.bounds(cd, 1) == point(cd)
+                    flagged.add(node);
+                end
+                node.left = obj.deleteBoundedNode(node.left, point, ... 
+                    mod(cd, obj.dim) + 1, flagged);
+            elseif point(1, cd) > node.val(1, cd)
+                if node.bounds(cd, 2) == point(cd)
+                    flagged.add(node);
+                end
+                node.right = obj.deleteBoundedNode(node.right, point, ...
+                    mod(cd, obj.dim) + 1, flagged);
+            end
+        end
+        
+        % Polishes the flagged nodes to reestablish correct bounds. Used in
+        % boundedDelete.
+        function polish(tree, val, flagged)
+            lst = flagged.array;
+            for i = 1 : length(lst)
+                node = lst(i);
+                cd = node.axis;
+                if node.bounds(cd, 1) == val(cd)
+                    if ~isnan(node.left)
+                        lMax = tree.findMaxNode(node.left, cd, node.left.axis);
+                        node.bounds(cd, 1) = lMax.val(cd);
+                    else
+                        ancestor = node; foundVal = 0;
+                        while ~isnan(ancestor.parent)
+                           ancestor = ancestor.parent;
+                           if ancestor.axis == cd && ancestor.val(cd) ... 
+                                   < node.val(cd)
+                               node.bounds(cd, 1) = ancestor.val(cd);
+                               foundVal = 1;
+                               break;
+                           end
+                        end
+                        if ~foundVal
+                            node.bounds(cd, 1) = -tree.infty;
+                        end
+                    end
+                else
+                    if ~isnan(node.right)
+                        rMin = tree.findMinNode(node.right, cd, node.right.axis);
+                        node.bounds(cd, 2) = rMin.val(cd);
+                    else
+                        ancestor = node; foundVal = 0;
+                        while ~isnan(ancestor.parent)
+                            ancestor = ancestor.parent;
+                            if ancestor.axis == cd && ancestor.val(cd) ... 
+                                    > node.val(cd)
+                                node.bounds(cd, 2) = ancestor.val(cd);
+                                foundVal = 1;
+                                break;
+                            end
+                        end
+                        if ~foundVal
+                            node.bounds(cd, 2) = tree.infty;
+                        end
+                    end
+                end
+            end
         end
         
         % Recursive helper function for findMin.
@@ -398,12 +477,6 @@ classdef KDTree < handle
             else
                 node = n2;
             end
-        end
-        
-        % Gets the up (parent's) direction for the corresponding down
-        % direction
-        function upAxis = getUpAxis(obj, axis)
-            %TODO
         end
         
     end
